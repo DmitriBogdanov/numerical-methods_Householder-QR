@@ -3,23 +3,25 @@
 
 # Project name
 
-SHORT PROJECT DESCRIPTION
+This project is a part of a numerical analysis course. It implements following algorithms:
 
 ## Documentation
 
-DOCUMENTATION OR LINKS TO IT, SHORT USAGE EXAMPLES
-
-## Work in progress
-
-A LISTING OF WORK-IN-PROGRESS FEATURES
+See `report/report.pdf` for implementation notes (ru). Most functions include proper in-code documentation (en).
 
 ## Requirements
 
-COMPILER VERSION AND MACHINE REQUIREMENTS
+- Requires C++17 support
 
 ## Dependencies
 
-LIST OF DEPENDENCIES
+### Firstparty
+
+- [prototyping_utils](https://github.com/DmitriBogdanov/prototyping_utils)
+
+### Thirdparty
+
+- [Eigen](https://eigen.tuxfamily.org/index.php)
 
 ## License
 
