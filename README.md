@@ -5,6 +5,15 @@
 
 This project is a part of a numerical analysis course. It implements following algorithms:
 
+- QR-factorization using Householder reflections
+- Modification of QR-factorization for Linear Least Squares (LLS) problem
+- LLS solver using QR-decomposition method
+- Backwards Gaussian Elimination
+- Hessenberg reduction using Householder reflections
+- Modification of QR-factorization for upper-hessenberg matrices
+- Regular QR-algorithm
+- Shifted QR-algorithm with Hessenberg decomposition
+
 ## Documentation
 
 See `report/report.pdf` for implementation notes (ru). Most functions include proper in-code documentation (en).
