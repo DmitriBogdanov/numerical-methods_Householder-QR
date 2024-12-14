@@ -1,0 +1,986 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                                   %%
+%%    Стилевой файл для оформления курсовый работ    %%
+%%                                                   %%
+%%    Автор И.К. Марчевский                          %%
+%%                                                   %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{fn2dipstyle}[23/03/2020 V.2.2. fn2kursstyle. Marchevsky Ilia]
+
+\newif\ifoglav\oglavfalse
+\newif\ifspisok\spisokfalse
+\newif\ifleftheadline\leftheadlinefalse
+\newif\ifboldsect\boldsectfalse
+\newif\ifeqwhole\eqwholefalse
+\newif\iffigwhole\figwholefalse
+\newif\iffootwhole\footwholefalse
+\newif\ifkursrab\kursrabfalse
+\newif\ifremarks\remarksfalse
+\newif\ifhyperprint\hyperprintfalse
+\newif\ifgreekit\greekitfalse
+\newif\ifhyperref\hyperreffalse
+\newif\ifnodotheadline\nodotheadlinefalse
+
+\DeclareOption{oglav}{\oglavtrue}
+\DeclareOption{spisok}{\spisoktrue}
+\DeclareOption{leftheadline}{\leftheadlinetrue}
+\DeclareOption{boldsect}{\boldsecttrue}
+\DeclareOption{eqwhole}{\eqwholetrue}
+\DeclareOption{figwhole}{\figwholetrue}
+\DeclareOption{footwhole}{\footwholetrue}
+\DeclareOption{kursrab}{\kursrabtrue}
+\DeclareOption{remarks}{\remarkstrue}
+\DeclareOption{hyperprint}{\hyperprinttrue}
+\DeclareOption{greekit}{\greekittrue}
+\DeclareOption{hyperref}{\hyperreftrue}
+\DeclareOption{nodotheadline}{\nodotheadlinetrue}
+
+
+%% Метки на полях - чтобы было удобно замечания писать!
+
+\marginparwidth 37mm
+\marginparsep 2mm
+
+% \oddsidemargin=-0.5cm
+% \textwidth=17cm
+% \topmargin=-1.5cm%0pt
+% \textheight=25cm
+
+ \oddsidemargin=0.46cm
+ \textwidth=16.0cm
+ \topmargin=-0.54cm%0pt
+ \textheight=24cm
+
+
+
+\newcommand{\rem}[1]{%
+\ifremarks%
+ \renewcommand{\baselinestretch}{1.0}
+ \selectfont
+ \hoffset=-25mm
+ %\reversemarginpar
+ \marginpar{\small\raggedright\sffamily#1}%
+\else%
+\fi%
+}
+
+
+\ProcessOptions
+
+
+\RequirePackage{amssymb}
+\RequirePackage{amsmath}
+\RequirePackage{cite}
+\RequirePackage{caption}
+\RequirePackage{cmap}
+\RequirePackage{ucs}
+\RequirePackage{graphicx}
+\RequirePackage{indentfirst}
+\RequirePackage{ifpdf}
+\RequirePackage{soulutf8}
+
+\ifpdf%
+  %{
+   \ifhyperref
+   \usepackage{hyperref}%
+   \usepackage[numbered]{bookmark}%
+   \fi%
+  %}
+\fi
+
+
+\ifgreekit
+\def\omicron{o}
+\else
+%Прямые греческие
+ \let\Alpha\relax
+ \let\Beta\relax
+ \let\Gamma\relax
+ \let\Delta\relax
+ \let\Epsilon\relax
+ \let\Zeta\relax
+ \let\Eta\relax
+ \let\Theta\relax
+ \let\Iota\relax
+ \let\Kappa\relax
+ \let\Lambda\relax
+ \let\Mu\relax
+ \let\Nu\relax
+ \let\Xi\relax
+ \let\Omicron\relax
+ \let\Pi\relax
+ \let\Rho\relax
+ \let\Sigma\relax
+ \let\Tau\relax
+ \let\Upsilon\relax
+ \let\Phi\relax
+ \let\Chi\relax
+ \let\Psi\relax
+ \let\Omega\relax
+
+ \DeclareFontFamily{T1}{umathgr}{}
+ \DeclareFontShape{T1}{umathgr}{m}{n}{%
+  <-> omsegr }{}
+ \DeclareFontShape{T1}{umathgr}{b}{n}{%
+  <-> omsegrb }{}
+ \DeclareFontShape{T1}{umathgr}{m}{it}{%
+  <-> omsegri }{}
+ \DeclareSymbolFont{um@thgr}{T1}{umathgr}{m}{n}
+ \SetSymbolFont{um@thgr}{bold}{T1}{umathgr}{b}{n}
+ \DeclareMathAlphabet{\mathgbf}{T1}{umathgr}{b}{n}
+ \DeclareMathAlphabet{\mathgit}{T1}{umathgr}{m}{it}
+
+ \DeclareMathSymbol{\alpha}{\mathalpha}{um@thgr}{"61}
+ \DeclareMathSymbol{\Alpha}{\mathalpha}{um@thgr}{"40}
+
+ \DeclareMathSymbol{\beta}{\mathalpha}{um@thgr}{"62}
+ \DeclareMathSymbol{\varbeta}{\mathalpha}{um@thgr}{"31}
+ \DeclareMathSymbol{\Beta}{\mathalpha}{um@thgr}{"41}
+
+ \DeclareMathSymbol{\gamma}{\mathalpha}{um@thgr}{"67}
+ \DeclareMathSymbol{\Gamma}{\mathalpha}{um@thgr}{"47}
+
+ \DeclareMathSymbol{\delta}{\mathalpha}{um@thgr}{"64}
+ \DeclareMathSymbol{\Delta}{\mathalpha}{um@thgr}{"44}
+
+ \DeclareMathSymbol{\varepsilon}{\mathalpha}{um@thgr}{"65}
+ \DeclareMathSymbol{\Epsilon}{\mathalpha}{um@thgr}{"45}
+
+ \DeclareMathSymbol{\zeta}{\mathalpha}{um@thgr}{"7A}
+ \DeclareMathSymbol{\Zeta}{\mathalpha}{um@thgr}{"5A}
+
+ \DeclareMathSymbol{\eta}{\mathalpha}{um@thgr}{"68}
+ \DeclareMathSymbol{\Eta}{\mathalpha}{um@thgr}{"48}
+
+ \DeclareMathSymbol{\theta}{\mathalpha}{um@thgr}{"6A}
+ \DeclareMathSymbol{\vartheta}{\mathalpha}{um@thgr}{"32}
+ \DeclareMathSymbol{\Theta}{\mathalpha}{um@thgr}{"4A}
+
+ \DeclareMathSymbol{\iota}{\mathalpha}{um@thgr}{"69}
+ \DeclareMathSymbol{\Iota}{\mathalpha}{um@thgr}{"49}
+
+ \DeclareMathSymbol{\kappa}{\mathalpha}{um@thgr}{"35}
+ \DeclareMathSymbol{\varkappa}{\mathalpha}{um@thgr}{"6B}
+ \DeclareMathSymbol{\Kappa}{\mathalpha}{um@thgr}{"4B}
+
+ \DeclareMathSymbol{\lambda}{\mathalpha}{um@thgr}{"6C}
+ \DeclareMathSymbol{\Lambda}{\mathalpha}{um@thgr}{"4C}
+
+ \DeclareMathSymbol{\mu}{\mathalpha}{um@thgr}{"6D}
+ \DeclareMathSymbol{\Mu}{\mathalpha}{um@thgr}{"4D}
+
+ \DeclareMathSymbol{\nu}{\mathalpha}{um@thgr}{"6E}
+ \DeclareMathSymbol{\Nu}{\mathalpha}{um@thgr}{"4E}
+
+ \DeclareMathSymbol{\xi}{\mathalpha}{um@thgr}{"78}
+ \DeclareMathSymbol{\Xi}{\mathalpha}{um@thgr}{"51}
+
+ \DeclareMathSymbol{\omicron}{\mathalpha}{um@thgr}{"6F}
+ \DeclareMathSymbol{\Omicron}{\mathalpha}{um@thgr}{"4F}
+
+ \DeclareMathSymbol{\pi}{\mathalpha}{um@thgr}{"70}
+ \DeclareMathSymbol{\varpi}{\mathalpha}{um@thgr}{"37}
+ \DeclareMathSymbol{\Pi}{\mathalpha}{um@thgr}{"50}
+
+ \DeclareMathSymbol{\rho}{\mathalpha}{um@thgr}{"72}
+ \DeclareMathSymbol{\varrho}{\mathalpha}{um@thgr}{"34}
+ \DeclareMathSymbol{\Rho}{\mathalpha}{um@thgr}{"52}
+
+ \DeclareMathSymbol{\sigma}{\mathalpha}{um@thgr}{"73}
+ \DeclareMathSymbol{\varsigma}{\mathalpha}{um@thgr}{"62}
+ \DeclareMathSymbol{\Sigma}{\mathalpha}{um@thgr}{"53}
+
+ \DeclareMathSymbol{\tau}{\mathalpha}{um@thgr}{"74}
+ \DeclareMathSymbol{\Tau}{\mathalpha}{um@thgr}{"54}
+
+ \DeclareMathSymbol{\upsilon}{\mathalpha}{um@thgr}{"75}
+ \DeclareMathSymbol{\Upsilon}{\mathalpha}{um@thgr}{"55}
+ \DeclareMathSymbol{\Varupsilon}{\mathalpha}{um@thgr}{"30}
+
+ \DeclareMathSymbol{\phi}{\mathalpha}{um@thgr}{"33}
+ \DeclareMathSymbol{\varphi}{\mathalpha}{um@thgr}{"66}
+ \DeclareMathSymbol{\Phi}{\mathalpha}{um@thgr}{"46}
+
+ \DeclareMathSymbol{\chi}{\mathalpha}{um@thgr}{"71}
+ \DeclareMathSymbol{\Chi}{\mathalpha}{um@thgr}{"51}
+
+ \DeclareMathSymbol{\psi}{\mathalpha}{um@thgr}{"79}
+ \DeclareMathSymbol{\Psi}{\mathalpha}{um@thgr}{"59}
+
+ \DeclareMathSymbol{\omega}{\mathalpha}{um@thgr}{"77}
+ \DeclareMathSymbol{\Omega}{\mathalpha}{um@thgr}{"57}
+
+\fi
+
+%\RequirePackage{geometry}
+
+
+
+
+
+
+\pagestyle{headings}
+
+\makeatletter
+
+%Русские переносы - 2 знака от конца
+\righthyphenmin=2
+\frenchspacing
+
+%Перенос знака математической операции на новую строчку
+\newcommand\brop[1]{#1\discretionary{}{\hbox{$#1$}}{}}
+
+%Красивые знаки "больше либо равно" и "меньше либо равно"
+\renewcommand{\ge}{\geqslant}
+\renewcommand{\le}{\leqslant}
+
+%Пустое множество
+\def\emptyset{\varnothing}
+
+%Интерлиньяж (междустрочный интервал)
+\renewcommand{\baselinestretch}{1.3}
+
+%%Изменение отбивок в перечнях на нормальные
+\renewcommand{\@listI}{%
+\leftmargin=32pt \rightmargin=0pt \labelsep=5pt \labelwidth=10pt
+\itemindent=0pt \listparindent=0pt%%
+\topsep=1pt plus 1pt minus 1 pt
+\partopsep=2pt plus 1pt minus 1pt
+\parsep=0pt plus 1pt
+\itemsep=\parsep}
+
+\renewcommand{\@listii}{%
+\leftmargin=25pt \rightmargin=0pt \labelsep=5pt \labelwidth=20pt
+\itemindent=0pt \listparindent=0pt%%
+\topsep=1pt plus 1pt minus 1 pt
+\partopsep=2pt plus 1pt minus 1pt
+\parsep=0pt plus 1pt
+\itemsep=\parsep}
+
+%% Команда центрирования для многострочных заголовков
+\def\raggedcenter@{\leftskip\z@ plus.4\hsize \rightskip\leftskip
+ \parfillskip\z@ \parindent\z@ \spaceskip.5em \xspaceskip.7em\relax
+ \pretolerance9999\tolerance9999 \exhyphenpenalty\@M\relax
+ \hyphenpenalty\@M \let\\\linebreak}
+
+%% Точка после номеров рисунков и таблиц
+\captionsetup{labelsep=period}
+
+
+
+%\newcommand*\stretchwith[2]{%
+%  \let\@tempa\relax
+%  \def\@tempb{#1}%
+%  \@tfor\@tempc:=#2\do {\@tempa \@tempc \let\@tempa\@tempb}%
+%}
+
+
+
+\ifnodotheadline
+ \def\@@dothead{\ }
+\else
+ \def\@@dothead{.\ }
+\fi
+
+
+%Формируем колонтитулы: в колонтитулы название раздела (либо то, что стоит в квадратных скобках)
+\def\sectionmark#1{\markboth%
+{\ifnum\c@secnumdepth>\z@\conthdsection\thesection\@@dothead\ \fi#1}%
+{\ifnum\c@secnumdepth>\z@\conthdsection\thesection\@@dothead\ \fi#1}%
+}
+
+
+%%-----------------------------------------------------------
+%% Аналог команды @startsection, но с точками после номеров.
+%%-----------------------------------------------------------
+\def\@startctsection#1#2#3#4#5#6{\if@noskipsec \leavevmode \fi
+   \par \@tempskipa #4\relax
+   \@afterindenttrue
+   \ifdim \@tempskipa <\z@ \@tempskipa -\@tempskipa \@afterindentfalse\fi
+   \if@nobreak \everypar{}\else
+     \addpenalty{\@secpenalty}\addvspace{\@tempskipa}\fi
+     \@ifstar
+     %%%{\@sctsect{#3}{#4}{#5}{#6}}                                         %%% ---  И.К. 29.09.2009
+     {\@sctsect{0mm}{#4}{#5}{#6}}                                           %%% ---  И.К. 29.09.2009
+     {\@threarg{\@ctsect{#1}{#2}{#3}{#4}{#5}{#6}}}}
+
+\long\def\@threarg#1{\@ifnextchar [{\@nthrearg{#1}}{\@xthrearg{#1}}}
+\long\def\@xthrearg#1#2{#1[{#2}][{#2}]{#2}}
+\long\def\@nthrearg#1[#2]{\@ifnextchar [{#1[#2]}{#1[#2][#2]}}
+
+%\long\def\@dblarg#1{\@ifnextchar[{#1}{\@xdblarg{#1}}}
+%\long\def\@xdblarg#1#2{#1[{#2}]{#2}}
+
+\def\@ctsect#1#2#3#4#5#6[#7][#8]#9{\ifnum #2>\c@secnumdepth
+     \let\@svsec\@empty\else
+     \refscstepcounter{#1}\def\@svsec{\@makectsecthead{#1}\hskip #3}\fi
+     \ifdefined\href
+        \Hy@GlobalStepCount\Hy@linkcounter                                         % И.К.
+        \xdef\@currentHref{section*.\the\Hy@linkcounter}%                          % И.К.
+        \Hy@raisedlink{\hyper@anchorstart{\@currentHref}\hyper@anchorend}%         % И.К.
+       %
+     \else
+        %\message{no package hyperref}%
+     \fi
+
+     \@tempskipa #5\relax
+      \ifdim \@tempskipa>\z@
+        \begingroup
+        #6\relax
+          \ifleftheadline{}
+           \@hangfrom{\@svsec\hskip #3\relax                                 %%%    --- И.К. 29.09.2009
+                    }{\interlinepenalty \@M #9\par}%                         %%%    --- И.К. 29.09.2009
+          \else {}
+           \raggedcenter@\interlinepenalty\@M #6\relax\@svsec #9\par         %%%    --- И.К. 29.09.2009
+          \fi
+
+        \endgroup
+       \csname #1mark\endcsname{#8}\addcontentsline
+         {toc}{#1}{\ifnum #2>\c@secnumdepth \else
+                      \protect\numberline{%
+                      \ifpdf\ifhyperref%
+                      \texorpdfstring%
+                      {\hbox to 0pt{\hss\csname conthd#1\endcsname}}
+                      {\hss \csname conthd#1\endcsname}%
+                      \else%
+                      {\hbox to 0pt{\hss\csname conthd#1\endcsname}}
+                      \fi\fi%
+                      %
+                      \ifboldsect{%
+                      \ifnum #2=1 {%
+                      \textbf{\csname the#1\endcsname\@@dothead}%
+                      }%
+                      \else%
+                      {\csname the#1\endcsname\@@dothead}\fi%
+                      }%
+                      \else%
+                      {{\csname the#1\endcsname\@@dothead}}%
+                      \fi%
+                      %
+                      }\fi%
+                    \ifboldsect{%
+                    \ifnum #2=1{%
+                    %\textbf{#7}%                                    %%%    --- И.К. 23.05.2011
+                    %%%%%\textbf{\ignorespaces#7}%                   %%%    --- И.К. 23.05.2011
+                    \textbf{\ignorespaces\ifx&#7&{#9}\else{#7}\fi}%  %%%    --- И.К. 29.09.2011
+                    }%
+                    \else%
+                    %#7%                                        %%%    --- И.К. 23.05.2011
+                    %%%%%\ignorespaces#7%                       %%%    --- И.К. 23.05.2011
+                    \ignorespaces\ifx&#7&{#9}\else{#7}\fi%      %%%    --- И.К. 29.09.2011
+                    \fi%
+                    }%
+                    \else%
+                    %#7%                                        %%%    --- И.К. 23.05.2011
+                    %%%%%\ignorespaces#7%                       %%%    --- И.К. 23.05.2011
+                    \ignorespaces\ifx&#7&{#9}\else{#7}\fi%      %%%    --- И.К. 29.09.2011
+                    \fi%
+                    }\else
+        \def\@svsechd{#6\hskip #3\relax  %% \relax added 2 May 90
+                   \@svsec #9\csname #1mark\endcsname
+                      {#8}\addcontentsline
+                           {toc}{#1}{\ifnum #2>\c@secnumdepth \else
+                             \protect\numberline{\csname the#1\endcsname\@@dothead}\fi
+                       %#7}}\fi                                 %%%    --- И.К. 23.05.2011
+                       \ignorespaces#7}}\fi                     %%%    --- И.К. 23.05.2011
+     \@xsect{#5}}
+
+
+
+\def\@xsect#1{\@tempskipa #1\relax
+      \ifdim \@tempskipa>\z@
+       \par \nobreak
+       \vskip \@tempskipa
+       \@afterheading
+    \else \global\@nobreakfalse \global\@noskipsectrue
+       \everypar{\if@noskipsec \global\@noskipsecfalse
+                   \clubpenalty\@M \hskip -\parindent
+                   \begingroup \@svsechd \endgroup \unskip
+                   \hskip -#1\relax  % relax added 14 Jan 91
+                  \else \clubpenalty \@clubpenalty
+                    \everypar{}\fi}\fi\ignorespaces}
+
+\def\@sctsect#1#2#3#4#5{\@tempskipa #3\relax
+   \ifdim \@tempskipa>\z@
+     {\begingroup
+   \ifleftheadline{}
+     \interlinepenalty\@M\noindent#4\hskip#1\relax#5\par
+   \else
+     \interlinepenalty\@M \raggedcenter@ #4\hskip #1\relax #5\par     %%%    --- И.К. 29.09.2009
+   \fi
+     \endgroup}
+   \else
+     \begingroup
+      \ifleftheadline{}
+       \def\@svsechd{\noindent#4\hskip #1\relax #5}            %%%    --- И.К. 29.09.2009
+      \else
+       \def\@svsechd{\raggedcenter@ #4\hskip #1\relax #5}            %%%    --- И.К. 29.09.2009
+      \fi
+     \endgroup
+     \fi
+    \@xsect{#3}}
+
+%%%\def\@makectsecthead#1{\csname head#1 \endcsname \csname the#1 \endcsname.}
+\def\@makectsecthead#1{\csname head#1\endcsname\upshape{\csname the#1\endcsname\@@dothead\ignorespaces}} %%% И.К. 23.05.2011
+
+% ---------------------------------
+% --------- CUSTOMIZATION ---------
+% ---------------------------------
+% Фиксим Warning использования токена `\hss` при генерации PDF-строки для \section
+\pdfstringdefDisableCommands{
+  \def\hss{}
+}
+
+\newcommand{\sectionfont}{\Large\bf}
+\def\section{ 
+	\@ifnextchar -{\@@nsection{\secsepbefore}{\secsepafter}
+	\reset@font\sectionfont}{\@startctsection
+	{section}{1}{\@secdelim}
+	{\secsepbefore}{\secsepafter}{\reset@font\sectionfont}}
+}
+\def\secsepbefore{3.5ex plus 1ex minus .2ex}
+\def\secsepafter{2.3ex plus.2ex}
+\def\@@nsection#1#2#3-{
+   \if@noskipsec \leavevmode \fi
+   \par \@tempskipa #1\relax
+   \@afterindenttrue
+   \ifdim \@tempskipa <\z@ \@tempskipa -\@tempskipa \@afterindentfalse\fi
+   \if@nobreak \everypar{}\else
+     \addpenalty{\@secpenalty}\addvspace\@tempskipa\fi
+    \@threarg{\@nsection{#1}{#2}{#3}}}
+\def\@nsection#1#2#3[#4][#5]#6{\relax
+     \@tempskipa #2\relax
+        \begingroup
+        \ifdefined\href
+          \Hy@GlobalStepCount\Hy@linkcounter                                         % И.К.
+          \xdef\@currentHref{section*.\the\Hy@linkcounter}%                          % И.К.
+          \Hy@raisedlink{\hyper@anchorstart{\@currentHref}\hyper@anchorend}%         % И.К.
+          %
+        \else
+          %\message{no package hyperref}%
+         \fi
+
+        \ifleftheadline{}
+         #3\noindent#6\par                                %%% И.К. - 29.09.2009
+        \else
+         \raggedcenter@ #3 #6\par                         %%% И.К. - 29.09.2009
+        \fi
+
+        \endgroup
+        \markright{#5}\relax
+
+        \ifboldsect{
+        \addcontentsline
+         %%%{toc}{section}{\protect\numberline{}#5}%         %%% И.К. - 29.09.2009
+         %%%{toc}{section}{\textbf{#5}}%                     %%% И.К. - 29.09.2009
+         %%%%%{toc}{section}{\textbf{\ignorespaces#5}}%      %%% И.К. - 23.05.2011
+         {toc}{section}{\textbf{\ignorespaces\ifx&#4&{#6}\else{#4}\fi}}%      %%% И.К. - 29.09.2011
+         \ifpdf\ifhyperref%
+          \phantomsection%
+         \fi\fi
+         %} \else { \addcontentsline{toc}{section}{#5} } \fi                  %%% И.К. - 23.05.2011
+         %%%%%} \else { \addcontentsline{toc}{section}{\ignorespaces#5} } \fi %%% И.К. - 23.05.2011
+         } \else { \addcontentsline{toc}{section}{\ignorespaces\ifx&#4&{#6}\else{#4}\fi} } \fi %%% И.К. - 29.09.2011
+     \@xsect{#2}}
+
+\def\secdelim#1{\def\@secdelimamount{#1}\gdef\@secdelim{\@secdelimamount}}
+\def\refscstepcounter#1{\stepcounter{#1}\let\@tempa\protect
+\def\protect{\noexpand\protect\noexpand}%
+\edef\@currentlabel{\csname p@#1\endcsname
+                    \csname conthd#1\endcsname
+                    \csname the#1\endcsname}%
+\let\protect\@tempa}
+
+\gdef\conthdchapter{}\gdef\appendixname{Приложение}
+\gdef\headsection{}\gdef\conthdsection{}
+\secdelim{0.1em}
+%%%\def\thesection{\thechapter.\arabic{section}}                  %%%% И.К. - 29.09.2009
+\def\thesection{\arabic{section}}                                 %%%% И.К. - 29.09.2009
+\def\contentsname{Оглавление}
+%%%\def\subsection{\@startctsection {subsection}{2}{0.3em}%     %%%% И.К. - 29.09.2009
+\def\subsection{\@startctsection {subsection}{2}{\@secdelim}%     %%%% И.К. - 29.09.2009
+        {3ex plus 1ex minus .2ex}{2ex plus 0.3ex minus 0.2ex}{\bf}}
+\def\subsubsection{\@startctsection {subsubsection}{3}{\@secdelim}%                %%%% И.К. - 07.12.2013
+        {3ex plus 1ex minus .2ex}{2ex plus 0.3ex minus 0.2ex}{\bf}}     %%%% И.К. - 29.09.2009
+\def\headsubsection{}\def\conthdsubsection{}
+\def\headsubsubsection{}\def\conthdsubsubsection{}				   %%%% И.К. - 07.12.2013	
+%%%\def\l@section{\@dottedtocline{1}{1.7em}{2.3em}}                     %%%% И.К. - 29.09.2009
+\def\l@section{\vspace*{3mm}\@dottedtocline{1}{0em}{1.6em}}
+\def\l@subsection{\vspace*{2mm}\@dottedtocline{2}{1.6em}{2.2em}}
+\def\l@subsubsection{\vspace*{1mm}\@dottedtocline{2}{3.8em}{2.8em}}
+\newcommand\initcounter[1]{\stepcounter{#1}\addtocounter{#1}{-1}}
+
+
+
+
+
+%%%%%%% Нумерация формул - по разделам
+\ifeqwhole \else \renewcommand\theequation{\arabic{section}.\arabic{equation}} \@addtoreset{equation}{section}\fi
+
+
+%%%%%%% Нумерация рисунков - по разделам
+\iffigwhole \else \renewcommand\thefigure{\arabic{section}.\arabic{figure}} \@addtoreset{figure}{section}\fi
+
+
+%%%%%%% Сноски - добавляем пробел
+\renewcommand{\@makefntext}[1]{\renewcommand{\baselinestretch}{1.0}\selectfont\hangindent=2.3em\hangafter=1\parindent=1em\noindent\hbox to 2.3em{\hss\@makefnmark\rule{0.5em}{0pt}}#1}
+%\@addtoreset{footnote}{page}
+\iffootwhole
+\else
+\@addtoreset{footnote}{page}
+\fi
+
+
+\ifoglav{\addto\captionsrussian{\def\contentsname{Оглавление}}}\fi
+
+\ifleftheadline{}\else{ \def\tableofcontents{
+\markboth{\contentsname}{\contentsname}
+\thispagestyle{plain}
+\section*{\protect{\hbox to \textwidth{\hfill \contentsname \hfill}}}\@starttoc{toc} }}\fi
+
+
+\renewcommand{\@biblabel}[1]{#1.\hfill}
+
+%%%\addto\captionsrussian{\def\refname{Список литературы}}
+
+\ifspisok{\addto\captionsrussian{\def\refname{Список использованных источников}}}\else{\addto\captionsrussian{\def\refname{Литература}}}\fi
+
+
+%%%        Оформление списка литературы и цитирования источников
+
+\renewenvironment{thebibliography}[1]
+     {
+
+      \ifleftheadline{\section-{\refname}} \else{\section-[\refname]{\protect{\hbox to \textwidth{\hfill \refname \hfill}}}} \fi
+
+      %\section-{\bibname}%    %   Замена \chapter* на chapter- для вставки в оглавление. АК
+      \@mkboth{\refname}{\refname}%
+      \list{\@biblabel{\@arabic\c@enumiv}}%
+           {\settowidth\labelwidth{\@biblabel{#1}}%
+            \leftmargin\labelwidth
+            \advance\leftmargin\labelsep
+            \@openbib@code
+            \usecounter{enumiv}%
+            \let\p@enumiv\@empty
+            \renewcommand\theenumiv{\@arabic\c@enumiv}}%
+      \sloppy
+      \clubpenalty4000
+      \@clubpenalty \clubpenalty
+      \widowpenalty4000%
+      \sfcode`\.\@m}
+     {\def\@noitemerr
+       {\@latex@warning{Empty `thebibliography' environment}}%
+      \endlist}
+
+
+%%% Колонтитулы
+
+
+
+
+
+   \def\@oddhead{\vbox to \headheight{%
+                \hbox to \textwidth{%
+                   \hfil{\footnotesize\rightmark}\hfil
+                     \llap{\rm\thepage}}%
+                     \kern2pt\hrule\vss}}%
+
+
+% \def\sectionmark#1{\markboth{}{\uppercase{\ifnum \c@secnumdepth >\z@
+%   \conthdsection\thesection.\ \fi #1}}}}
+
+
+%% Обложка
+
+\def\group#1{\def\@group{#1}}
+\def\supervisor#1{\def\@supervisor{#1}}
+
+\renewcommand{\maketitle}{
+\thispagestyle{empty}
+{
+\centering
+
+\renewcommand{\baselinestretch}{1.0}
+\selectfont
+
+\vspace*{-10mm}
+
+\begin{minipage}{30mm}
+\includegraphics[scale=0.14]{emblema}
+\end{minipage}
+\begin{minipage}{127mm}
+\begin{center}
+\fontsize{9}{11pt}\selectfont\textbf{Министерство науки и высшего образования Российской Федерации}
+
+\fontsize{9}{11pt}\selectfont\textbf{Федеральное государственное бюджетное образовательное учреждение}
+
+\fontsize{9}{11pt}\selectfont\textbf{высшего образования}
+
+\fontsize{9}{11pt}\selectfont\textbf{<<Московский государственный технический университет}
+
+\fontsize{9}{11pt}\selectfont\textbf{имени Н.\,Э.~Баумана}
+
+\fontsize{9}{11pt}\selectfont\textbf{(национальный исследовательский университет)>>}
+
+\fontsize{9}{11pt}\selectfont\textbf{(МГТУ им.~Н.\,Э.~Баумана)}
+\end{center}
+\end{minipage}
+
+\vspace*{2mm}
+
+\hrule height .7mm
+
+
+
+\vspace*{2pt}
+
+\hrule
+
+}
+
+
+\vspace*{9mm}
+
+\noindent ФАКУЛЬТЕТ \rlap{\rule[-1.2mm]{132mm}{0.2mm}}\hbox to 132mm{\hfill Фундаментальные науки \hfill}
+
+\medskip
+
+\noindent КАФЕДРА \rlap{\rule[-1.2mm]{137.5mm}{0.2mm}}\hbox to 137.5mm{\hfill Прикладная математика \hfill}
+
+\vspace*{2cm}
+
+\centerline{\fontsize{18}{20pt}\selectfont\textbf{РАСЧЕТНО-ПОЯСНИТЕЛЬНАЯ ЗАПИСКА}}
+
+\vspace*{5mm}
+
+\centerline{\fontsize{17}{20pt}\selectfont\textit{\textbf{К ДОМАШНЕЙ РАБОТЕ ПО КУРСУ:}}}
+
+%\vspace*{5mm}
+
+%\centerline{\fontsize{17}{20pt}\selectfont\textit{\textbf{НА ТЕМУ:}}}
+
+\begin{center}
+\fontsize{18}{24pt}\selectfont\textit{\textbf{\@title}}
+\end{center}
+
+
+\vfill
+\vspace{-10pt}
+\noindent\begin{minipage}{55mm}
+\small
+\noindent Студент \rlap{\rule[-1.2mm]{39mm}{0.2mm}}\hbox to 39mm{\hfill \@group \hfill}
+\vspace{-20pt}
+\noindent \phantom{Студент} \raisebox{2mm}{\hbox to 39mm{\hfill \footnotesize(Группа) \hfill}}
+
+\vspace*{3.5mm}
+
+\noindent{Проверено}
+
+\vspace*{5mm}
+
+\end{minipage}
+\vspace{10pt}
+\rule{20mm}{0pt}
+\begin{minipage}{79mm}
+\noindent\rlap{\rule[-1.2mm]{30mm}{0.2mm}}\hbox to 30mm{\hfill} \quad \rlap{\rule[-1.2mm]{47mm}{0.2mm}}{\rule{3mm}{0pt}\@author}
+
+\noindent\raisebox{2mm}{\hbox to 30mm{\hfill \footnotesize(Подпись, дата) \hfill}} \quad  \raisebox{2mm}{\rule{5mm}{0pt}\footnotesize(И.\,О.~Фамилия)}
+
+\vspace*{2mm}
+
+\noindent\rlap{\rule[-1.2mm]{30mm}{0.2mm}}\hbox to 30mm{\hfill} \quad \rlap{\rule[-1.2mm]{47mm}{0.2mm}}{\rule{3mm}{0pt}\@supervisor}
+
+\noindent\raisebox{2mm}{\hbox to 30mm{\hfill \footnotesize(Подпись, дата) \hfill}} \quad  \raisebox{2mm}{\rule{5mm}{0pt}\footnotesize(И.\,О.~Фамилия)}
+
+\end{minipage}
+
+\vfill
+
+\centerline{\large\@date\ г.}
+
+\pagebreak}
+
+
+%% Старая обложка - автор Пузикова В.В.
+
+\newcommand{\oldcover}[9]{
+\thispagestyle{empty}
+{
+\centering
+
+
+\raisebox{15mm}[1mm]{\textrm{М\,и\,н\,и\,с\,т\,е\,р\,с\,т\,в\,о\,\,\,\,о\,б\,р\,а\,з\,о\,в\,а\,н\,и\,я\,\,\,\,и\,\,\,\,н\,а\,у\,к\,и\,\,\,\,Р\,о\,с\,с\,и\,й\,с\,к\,о\,й\,\,\,\,Ф\,е\,д\,е\,р\,а\,ц\,и\,и}}
+
+\kern-12mm
+{
+\fontsize{11}{14pt}\selectfont
+\textbf{Федеральное государственное бюджетное образовательное учреждение\\высшего профессионального образования\\%
+<<Московский\ государственный\ технический\ университет\ имени\ Н.\,Э.\,Баумана>>}\\[3mm]
+\hrule height .7mm
+
+}
+
+\vspace*{2pt}
+
+\hrule
+
+\bigskip%
+{\large\textit{Кафедра <<Прикладная математика>>}}\\%
+\vspace*{\fill}%
+\includegraphics[scale=0.4]{emblema}\\%
+\vspace*{\fill}%
+\Large\textit{
+\ifkursrab\textbf{Курсовая работа}
+\else\textbf{Курсовой проект}\fi
+}\\[2mm]%
+\ifx&#1&%
+\else
+ \textrm{по дисциплине <<#1>>}\\[2mm]
+\fi%
+\Large{\textbf{#2}}%
+%\end{center}%
+
+}
+\vspace*{\fill}%
+{
+\centering
+
+\bigskip
+
+%\begin{center}%
+\begin{tabular}{@{}p{3.0cm}@{}p{7.7cm}@{}p{0.3cm}@{}p{5.0cm}@{}}%
+\textit{Выполнил}& {#3} && \textit{#4}\\%
+\bigskip\\%
+\parbox[t]{3.0cm}{\textit{Научный}\\[-1pt] \textit{руководитель}}& \parbox[t]{7.7cm}{{#5}} && \textit{#6}\\%
+\bigskip\\%
+\ifx&#7&%
+\else
+ \textit{Консультант}& \parbox[t]{7.7cm}{{#7}} && \textit{#8}\\
+\fi%
+\end{tabular}\\%
+\vspace*{\fill}
+Москва --- {#9}\\
+%\hrulefill%\end{center}
+
+}
+\pagebreak}
+
+
+
+
+
+
+%Настройки вида гиперссылок
+
+\ifhyperprint{}
+\ifdefined\href
+\hypersetup{unicode=true, colorlinks=true, linkcolor=black, anchorcolor=black, citecolor=black, filecolor=black, menucolor=black, runcolor=black, urlcolor=black}
+\fi
+\else
+\ifdefined\href
+\hypersetup{unicode=true, colorlinks=true, bookmarks=true}
+\fi
+\fi
+
+
+%%Полужирный наклонный шрифт в формулах
+\newcommand\be[1]{\text{\mathversion{bold}${#1}$}}
+\newcommand\bi[1]{\text{\mathversion{bold}${#1}$}}
+\newcommand\mathbi[1]{\text{\mathversion{bold}${#1}$}}
+
+\newcommand\mi[1]{\text{\mathversion{normal}${#1}$}}
+\newcommand\mathmi[1]{\text{\mathversion{normal}${#1}$}}
+
+%%Дробь среднего размера \sfrac
+\def\sfrac#1#2{\hbox{\footnotesize$\displaystyle\frac{#1}{#2}$}}
+
+%%        Текст вразрядку. Обращение \looser{<число>}{текст}
+%%        <число> - величина клея в em'ах между буквами.
+\def\looser#1#2{%
+\let\@mysp\relax%
+\let\@myspinner\relax%
+\newlength{\@mysp}%
+\newlength{\@myspinner}%
+\setlength{\@mysp}{#1em}%
+\ifdim\@mysp=0em%
+\fi%
+\setlength{\@myspinner}{2.0\@mysp}%
+\addtolength{\@myspinner}{0.333em plus.03em minus.03em}%
+\sodef\textso{}{\@mysp}{\@myspinner}{\@myspinner}%
+\textso{#2}%
+\resetso%
+}
+
+
+\input letterspacing.tex
+\newcommand{\kerning}[2]{\mbox{\letterspace to #1\naturalwidth{#2}}}
+
+
+%\input{letterspacing.tex}\newcommand{\tracking}[2]{\mbox{\letterspace to #1\naturalwidth{#2}}}
+
+%\newcount\@oldcatcode
+%\def\looser{\@oldcatcode=\the\catcode` \catcode` =13\relax\@looser}
+%\def\@looser#1#2{\bgroup
+%     \def\loos@space{\kern #1em}%
+%     \def\loos@next{\loos@text}%
+%     \def\loos@text ##1{##1\loos@space\loos@next}%
+%     \loos@text #2{\let\loos@next=\relax\catcode` =\the\@oldcatcode}%
+%     \egroup}
+
+%\def\@looser#1#2{\def\loos@space{\kern #1em}%
+%     \def\loos@text ##1{##1\loos@space\noexpand\loos@text}%
+%     \loos@text #2{\kern-#1em\let\loos@text=\relax
+%                  \catcode` =\the\@oldcatcode}\relax}
+
+%\def\@looser#1#2{#2}
+
+%% Работа с рисунками
+
+
+\def\DefaultPicExt#1{\def\@DefaultPicext{#1}}
+\def\DefaultPath#1{\def\@DefaultPath{#1}}
+\DefaultPicExt{}
+\DefaultPath{}
+
+
+\let\@figcollect\relax
+\def\demofig{\ifANSI
+                \typeout{LўхЄ Ёшёєэъют эх тхфхЄё }%
+             \else
+                \typeout{Учет рисунков не ведется}
+             \fi}
+\def\figcollect{\newcounter{allfig}%
+        \def\@figcollect{\addtocounter{allfig}1}%
+            \ifANSI
+              \def\demofig{\typeout{TёЄЁхўхэю Ёшёєэъют: \arabic{allfig}}}%
+            \else
+              \def\demofig{\typeout{Встречено рисунков: \arabic{allfig}}}%
+            \fi}
+
+
+\def\@ParseFilename#1.#2;{\def\@CurrFilename{#1}\def\@CurrFileext{#2}}
+%\def\@AddFileext#1#2{\@ParseFilename#1.;\ifx\@CurrFileext\@empty
+%                    \def\@CurrFile{#1.#2}\else\def\@CurrFile{#1}\fi}
+\def\@AddFileext#1#2{\@ParseFilename#1.;\ifx\@CurrFileext
+                    \def\@CurrFile{#1.#2}\else\def\@CurrFile{#1}\fi}
+\def\@SetCurrfileSpec#1{\@AddFileext{#1}{\@DefaultPicext}%
+                        \ifx\@DefaultPath\@empty
+                            \def\@CurrFileSpec{\@CurrFile}\else
+                            \def\@CurrFileSpec{\@DefaultPath/\@CurrFile}\fi}
+
+%\def\@PicSpecial#1#2{\edef\@SpecBody{{em:graph \@CurrFileSpec,#1,#2}}%
+%                \let\@CurrFileSpec\relax
+%                \expandafter\special\@SpecBody\relax}%
+
+\def\@PicSpecial#1#2{\edef\@SpecBody{\@CurrFileSpec}%
+                \let\@CurrFileSpec\relax%
+                \expandafter\includegraphics[width=#1,height=#2]{\@SpecBody}\relax}%
+
+
+\def\Grdunit#1{\def\@GrdU{#1}}
+\Grdunit{pt}
+%%  #1 ширина, #2 высота, #3 глубина (входит в высоту), #4 имя файла
+\def\@gGraph#1#2#3#4{%
+            \@tempdima=#1\relax
+            \@tempdima=\@Graphscalefactor\@tempdima\relax
+            \edef\@Graphwidth{\the\@tempdima}%
+            \@tempdima=#2\@tempdima=\@Graphscalefactor\@tempdima
+            \edef\@Graphheight{\the\@tempdima}%
+            \if@permscale\else\gdef\@Graphscalefactor{1}\fi
+            \setbox\@tempboxa
+            \vbox to 0pt{\hsize=\@Graphwidth\offinterlineskip
+            \hbox to \@Graphwidth{\@SetCurrfileSpec{#4}%
+                        \@PicSpecial{\@Graphwidth}{\@Graphheight}\hfil}%
+            \vss}%
+            \@tempdima=-#3\advance\@tempdima by \@Graphheight
+            \ht\@tempboxa=\@tempdima\dp\@tempboxa=#3
+            \box\@tempboxa}
+
+\def\@addfigfile#1#2{}
+
+\def\@Graphscalefactor{1}
+\newif\if@permscale\@permscalefalse
+
+\def\Graph#1#2#3#4{\@addfigfile{graph}{#4}%
+                   \@gGraph{#1}{#2}{#3}{#4}}
+
+
+\def\picbox#1#2#3#4{\@addfigfile{picbox}{#3}%
+                    \mbox{\vbox{\@tempdima=#1\relax
+                          \@tempdima=\@Graphscalefactor\@tempdima
+                          \hsize=\@tempdima\offinterlineskip
+                          \hbox{\@gGraph{#1}{#2}{\@Grdepth}{#3}}%
+                          \ifx{#4}%
+                          \else
+                             \vskip\@picboxsep%
+                             \centering\captionfont #4%
+                          \fi}}}
+\def\setGrdepth#1{\def\@Grdepth{#1\gdef\@Grdepth{\Grdepth}}\ignorespaces}
+\def\@Grdepth{0pt}
+
+\def\figbox#1#2#3#4{\@ifnextchar[
+                      {\@figbox{#1}{#2}{#3}{#4}}%
+                      {\@figbox{#1}{#2}{#3}{#4}[]}}
+\def\@figbox#1#2#3#4[#5]{\@addfigfile{figbox}{#3}%
+               \mbox{\vbox{\@tempdima=#1\relax
+                     \@tempdima=\@Graphscalefactor\@tempdima
+                     \hsize=\@tempdima
+                     \edef\@saveinterlineskip{\lineskip\the\lineskip
+                                             \lineskiplimit\the\lineskiplimit}%
+                     \offinterlineskip
+                     \hbox{\@gGraph{#1}{#2}{0pt}{#3}}%
+                     \vskip\@captionsep
+                     \figcap[#5]{#4}}}}
+\let\@saveinterlineskip\relax
+
+
+%%%     Подписи к рисункам
+
+\def\figcap{\@ifnextchar[{\@figcap}{\@figcap[]}}
+\def\@figcap[#1]#2{\vbox{\@figcollect\@saveinterlineskip
+                    \def\@captype{figure}\relax\caption{#1}\label{#2}}}
+
+
+\long\def\@makecaption#1#2{%
+  \def\@tempa{#2}\def\@tempb{\ignorespaces}%
+  \ifx\@tempa\@tempb
+     \def\@tempb{{#1}}%
+  \else
+     \def\@tempb{{#1.} }%
+  \fi
+  \sbox\@tempboxa{\captionfont\@tempb#2}%
+  \ifdim \wd\@tempboxa >\hsize
+     {\captionfont\@tempb#2\par}%
+  \else
+    \global \@minipagefalse
+    \hb@xt@\hsize{\hfil\box\@tempboxa\hfil}%
+  \fi}
+
+%\newcommand\captionfont{\fontsize{9pt}{10pt}\fontshape{n}\fontseries{m}\selectfont}
+\def\captionsep#1{\def\@captionsep{#1}\ignorespaces}
+\def\picboxsep#1{\def\@picboxsep{#1}\ignorespaces}
+\captionsep{10\p@}
+\let\@picboxsep\@captionsep
+
+\def\dfb#1{\ifvmode\let\@tempa=\relax\else\let\@tempa=\vadjust\fi\@tempa{\vbox to 0pt{#1\vss}}}
+
+\def\figphantom#1#2#3#4#5#6{\@ifnextchar[
+                      {\@figphantom{#1}{#2}{#3}{#4}{#5}{#6}}%
+                      {\@figphantom{#1}{#2}{#3}{#4}{#5}{#6}[]}}
+\def\@figphantom#1#2#3#4#5#6[#7]{\dfb{\kern#1\hbox{\kern#2\figbox{#3}{#4}{#5}{#6}[#7]}}}
+
+
+\def\figph#1#2#3{\@ifnextchar[{\@figph{#1}{#2}{#3}}{\@@figph{#1}{#2}{#3}}}
+\def\@@figph#1#2#3{\dfb{\kern#1\hbox{\kern#2{#3}}}}
+\def\@figph#1#2#3[#4]{\dfb{\kern#1\parbox[t][1pt]{#4}{\kern#2{#3}}}}
+
+
+\def\wbreak{{\parfillskip=0pt\par\noindent}\hangafter=0}
+
+
+\makeatother
+
+
+\endinput

@@ -1,0 +1,3 @@
+---
+Checks:
+    -bugprone-sizeof-expression # this warning arises in C++14-style of SFINAE as a false positive

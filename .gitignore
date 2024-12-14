@@ -1,0 +1,35 @@
+# Ignore everything
+*
+
+# Whitelist directories
+!*/
+# Whitelist git config
+!.gitignore
+!.gitattributes
+# Whitelist toolchain configuration files
+!.clang-format
+!.clang-tidy
+!.clangd
+# Whilelist allowed extensions
+# > Code
+!*.h
+!*.hpp
+!*.c
+!*.cpp
+# > Docs
+!*.md
+!*.txt
+# > Scripts
+!*.sh
+!*.nb
+# -> Report
+!*.tex
+!*.pdf
+!*.sty
+!*.eps
+
+# Ignore build & temporary directories regarless of their contents
+.cache/
+build/
+temp/
+snippets/

@@ -1,0 +1,27 @@
+# Tested `clang-format` version: v.14.0.0
+#
+# Newer versions use slightly different set of flags,
+# if case of migration, following tool can prove rather helpful:
+# [https://clang-format-configurator.site]
+---
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: AcrossComments
+AlignConsecutiveBitFields: AcrossComments
+AlignConsecutiveDeclarations: AcrossComments
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: Yes
+ColumnLimit: 120
+IndentWidth: 4
+MaxEmptyLinesToKeep: 6
+PointerAlignment: Left
+SpacesInContainerLiterals: false
+TabWidth: 4
+WhitespaceSensitiveMacros:
+  - _utl_require # aren't really whitespace sensitive, but otherwise formatter aligns boolean && weirdly
+StatementMacros:
+  - _utl_reqs
