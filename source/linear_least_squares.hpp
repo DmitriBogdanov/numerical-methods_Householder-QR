@@ -1,23 +1,13 @@
 #pragma once
 
 #include "qr_factorization.hpp"
+#include "slae.hpp"
 
-// Backwards gaussian elimination. O(N^2) complexity.
-//
-// Assumes 'R' to be upper-triangular matrix.
-//
-inline Vector backwards_gaussian_elimination(const Matrix& R, Vector rhs) {
-    for (Idx i = R.rows() - 1; i >= 0; --i) {
-        for (Idx j = i + 1; j < R.cols(); ++j) rhs(i) -= R(i, j) * rhs(j);
-        rhs(i) /= R(i, i);
-    }
 
-    return rhs;
-}
 
 // Linear Least Squares problem. O(N^3) complexity.
 //
-// LLS has a following solusion:
+// LLS has a following solution:
 //    x = A^+ b
 //    where A^+ = R^-1 * Q^T
 //

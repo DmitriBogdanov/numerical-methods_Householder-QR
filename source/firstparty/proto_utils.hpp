@@ -1305,6 +1305,7 @@ inline Node operator""_utl_json(const char* c_str, std::size_t c_str_size) {
 
 #include <cstddef>
 
+#include <sstream>
 #include <string>
 #include <utility>
 
@@ -1320,6 +1321,7 @@ inline Node operator""_utl_json(const char* c_str, std::size_t c_str_size) {
 #include <chrono>        // steady_clock
 #include <fstream>       // ofstream
 #include <iostream>      // cout
+#include <list>          // list<>
 #include <mutex>         // lock_guard<>, mutex
 #include <ostream>       // ostream
 #include <stdexcept>     // std::runtime_error
@@ -1329,7 +1331,6 @@ inline Node operator""_utl_json(const char* c_str, std::size_t c_str_size) {
 #include <type_traits>   // is_integral_v<>, is_floating_point_v<>, is_same_v<>, is_convertible_to_v<>
 #include <unordered_map> // unordered_map<>
 #include <vector>        // vector<>
-#include <list>          // list<>
 
 // ____________________ DEVELOPER DOCS ____________________
 
@@ -1381,158 +1382,120 @@ unsigned int _integer_digit_count(IntType value) {
     // Note: There is probably a faster way of doing it
 }
 
-template <typename T>
-constexpr int _log_10_ceil(T num) {
-    return num < 10 ? 1 : 1 + _log_10_ceil(num / 10);
-}
-
 using clock = std::chrono::steady_clock;
 
 using ms = std::chrono::microseconds;
 
 inline const clock::time_point _program_entry_time_point = clock::now();
 
-// Grows string by 'size_increase' and returns pointer to the old ending
-// in a possibly reallocated string. This function is used in multiple places
-// to expand string buffer before formatting a known amount of characters into it.
-// inline char* _grow_string(std::string& buffer, std::size_t size_increase) {
-//     const std::size_t old_buffer_size = buffer.size();
-//     buffer.resize(old_buffer_size + size_increase);
-//     return buffer.data() + old_buffer_size;
-// }
-
 // =======================
 // --- Stringification ---
 // =======================
 
-template <typename Type, typename = void, typename = void>
-struct is_iterable_through : std::false_type {};
+// --- Internal type traits ---
+// ----------------------------
 
-template <typename Type>
-struct is_iterable_through<Type, std::void_t<decltype(++std::declval<Type>().begin())>,
-                           std::void_t<decltype(std::declval<Type>().end())>> : std::true_type {};
+#define utl_log_define_trait(trait_name_, ...)                                                                         \
+    template <class T, class = void>                                                                                   \
+    struct trait_name_ : std::false_type {};                                                                           \
+                                                                                                                       \
+    template <class T>                                                                                                 \
+    struct trait_name_<T, std::void_t<decltype(__VA_ARGS__)>> : std::true_type {};                                     \
+                                                                                                                       \
+    template <class T>                                                                                                 \
+    constexpr bool trait_name_##_v = trait_name_<T>::value;
 
-template <typename Type, typename = void, typename = void>
-struct is_index_sequence_expandable : std::false_type {};
+utl_log_define_trait(_has_string_append, std::string() += std::declval<T>());
+utl_log_define_trait(_has_begin, ++std::declval<T>().begin());
+utl_log_define_trait(_has_end, ++std::declval<T>().end());
+utl_log_define_trait(_has_get, std::get<0>(std::declval<T>()));
+utl_log_define_trait(_has_tuple_size, std::tuple_size<T>::value);
+utl_log_define_trait(_has_ostream_insert, std::declval<std::ostream>() << std::declval<T>());
 
-template <typename Type>
-struct is_index_sequence_expandable<Type, std::void_t<decltype(std::get<0>(std::declval<Type>()))>,
-                                    std::void_t<decltype(std::tuple_size<Type>::value)>> : std::true_type {};
+#undef utl_log_define_trait
+
+// --- Internal utils ---
+// ----------------------
+
+template <class>
+inline constexpr bool _always_false_v = false;
+
+template <typename T>
+constexpr int _log_10_ceil(T num) {
+    return num < 10 ? 1 : 1 + _log_10_ceil(num / 10);
+}
+
+template <typename T>
+constexpr std::size_t _max_float_digits =
+    4 + std::numeric_limits<T>::max_digits10 + std::max(2, _log_10_ceil(std::numeric_limits<T>::max_exponent10));
+// should be the smallest buffer size to account for all possible 'std::to_chars()' outputs,
+// see [https://stackoverflow.com/questions/68472720/stdto-chars-minimal-floating-point-buffer-size]
+
+// --- Stringifiers ---
+// --------------------
 
 template <class T>
-constexpr bool is_stringified_as_integer_v =
-    std::is_integral_v<T> && !std::is_same_v<T, char> && !std::is_same_v<T, bool>;
+void append_stringified(std::string& str, const T& value);
 
-template <class T>
-constexpr bool is_stringified_as_float_v = std::is_floating_point_v<T>;
-
-template <class T>
-constexpr bool is_stringified_as_bool_v = std::is_same_v<T, bool>;
-
-template <class T>
-constexpr bool is_stringified_as_string_v = std::is_same_v<T, char> || std::is_convertible_v<T, std::string_view>;
-
-template <class T>
-constexpr bool is_stringified_as_string_convertible_v =
-    std::is_convertible_v<T, std::string> && !is_stringified_as_string_v<T>;
-// 'std::filesystem::path' can convert to 'std::string' but not to 'std::string_view', and if it gets
-// interpreted as an array nasty things will happen as the array tries to iterate over path entries.
-// Don't know any other types with this issue, but if they exist the workaround will be the same.
-
-template <class T>
-constexpr bool is_stringified_as_array_v =
-    is_iterable_through<T>::value && !is_stringified_as_string_v<T> && !is_stringified_as_string_convertible_v<T>;
-// 'std::string' and similar types are also iterable through, don't want to treat them as arrays
-
-template <class T>
-constexpr bool is_stringified_as_tuple_v = is_index_sequence_expandable<T>::value && !is_stringified_as_array_v<T>;
-// 'std::array<>' is both iterable and idx sequence expandable like a tuple, we don't want to treat it like tuple
+void _append_stringified_bool(std::string& str, bool value) { str += value ? "true" : "false"; }
 
 // Fast implementation for stringifying an integer and appending it to 'std::string'
-template <class Integer, std::enable_if_t<is_stringified_as_integer_v<Integer>, bool> = true>
-void append_stringified(std::string& str, Integer value) {
+template <class T>
+void _append_stringified_integer(std::string& str, T value) {
 
     // Note:
     // We could count the digits of 'value', preallocate buffer for exactly however many characters
     // we need and format directly to it, however benchmarks showed that it is actually inferior to
     // just doing things the usual way with a stack-allocated middle-man buffer.
-
-    if (value == 0) { // 'std::to_chars' converts 0 to "" due to skipping leading zeroes, we want "0" instead
-        str += '0';
-        return;
-    }
-
-    std::array<char, std::numeric_limits<Integer>::digits10> buffer;
+    std::array<char, std::numeric_limits<T>::digits10> buffer;
     const auto [number_end_ptr, error_code] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
 
     if (error_code != std::errc())
         throw std::runtime_error(
-            "stringify_integer() encountered std::to_chars() formatting error while serializing a value.");
+            "Integer stringification encountered std::to_chars() formatting error while serializing a value.");
 
     str.append(buffer.data(), number_end_ptr - buffer.data());
 }
 
 // Fast implementation for stringifying a float and appending it to 'std::string'
-template <class Float, std::enable_if_t<is_stringified_as_float_v<Float>, bool> = true>
-void append_stringified(std::string& str, Float value) {
-
-    constexpr int max_exponent = std::numeric_limits<Float>::max_exponent10;
-    constexpr int max_digits   = 4 + std::numeric_limits<Float>::max_digits10 + std::max(2, _log_10_ceil(max_exponent));
-    // should be the smallest buffer size to account for all possible 'std::to_chars()' outputs,
-    // see [https://stackoverflow.com/questions/68472720/stdto-chars-minimal-floating-point-buffer-size]
-
-    std::array<char, max_digits> buffer;
+template <class T>
+void _append_stringified_float(std::string& str, T value) {
+    std::array<char, _max_float_digits<T>> buffer;
     const auto [number_end_ptr, error_code] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
 
     if (error_code != std::errc())
         throw std::runtime_error(
-            "stringify_integer() encountered std::to_chars() formatting error while serializing a value.");
+            "Float stringification encountered std::to_chars() formatting error while serializing a value.");
 
     str.append(buffer.data(), number_end_ptr - buffer.data());
 }
 
-template <class Bool, std::enable_if_t<is_stringified_as_bool_v<Bool>, bool> = true>
-void append_stringified(std::string& str, Bool value) {
-    str += value ? "true" : "false";
-}
-
-// Note that 'Stringlike' includes 'char' because the only thing we care
-// about is being able to append the value directly with 'std::string::operator+='
-template <class Stringlike, std::enable_if_t<is_stringified_as_string_v<Stringlike>, bool> = true>
-void append_stringified(std::string& str, const Stringlike& value) {
+template <class T>
+void _append_stringified_stringlike(std::string& str, const T& value) {
     str += value;
+    // 'std::string' has operator '+=' for following types:
+    // 1) 'const std::string&'
+    // 2) char-like (includes all integral types)
+    // 3) 'std::string_view'-convertible
 }
 
-template <class StringConvertible,
-          std::enable_if_t<is_stringified_as_string_convertible_v<StringConvertible>, bool> = true>
-void append_stringified(std::string& str, const StringConvertible& value) {
+template <class T>
+void _append_stringified_string_convertible(std::string& str, const T& value) {
     str += std::string(value);
 }
 
-// Tuple stringification relies on variadic template over the index sequence, but such template
-// cannot have default arguments like 'enable_if_t<...> = true' at the end, preventing us from
-// doing the usual SFINAE.
-//
-// We can SFINAE in a wrapper method 'append_stringified()' and make variadic implementation a separate function,
-// avoiding all issues. This is canonical to how 'std::integer_sequence' is usually used, see cppreference:
-// https://en.cppreference.com/w/cpp/utility/integer_sequence.
-//
-// Due to recursive 'append_stringified()' calls during tuple and array stringification,
-// to be able to handle nested tuples & arrays we need to satisfy following relations:
-//      'append_stringified(tuple)'             -> knows '_append_stringified_tuple_impl(tuple)'
-//     '_append_stringified_tuple_impl(tuple)'  -> knows  'append_stringified(array)' and 'append_stringified(tuple)'
-//      'append_stringified(array)'             -> knows  'append_stringified(tuple)'
-// which is why we predeclare all the necessary 'append_stringified()' and then have the impl.
+template <class T>
+void _append_stringified_array(std::string& str, const T& value) {
+    str += "{ ";
+    if (value.begin() != value.end())
+        for (auto it = value.begin();;) {
+            append_stringified(str, *it);
+            if (++it == value.end()) break; // prevents trailing comma
+            str += ", ";
+        }
+    str += " }";
+}
 
-// Predeclare
-template <class Arraylike, std::enable_if_t<is_stringified_as_array_v<Arraylike>, bool> = true>
-void append_stringified(std::string& str, const Arraylike& value);
-
-template <template <typename... Params> class Tuplelike, typename... Args,
-          std::enable_if_t<is_stringified_as_tuple_v<Tuplelike<Args...>>, bool> = true>
-void append_stringified(std::string& str, const Tuplelike<Args...>& value);
-
-// Implement
 template <class Tuplelike, std::size_t... Idx>
 void _append_stringified_tuple_impl(std::string& str, Tuplelike value, std::index_sequence<Idx...>) {
     ((Idx == 0 ? "" : str += ", ", append_stringified(str, std::get<Idx>(value))), ...);
@@ -1540,29 +1503,52 @@ void _append_stringified_tuple_impl(std::string& str, Tuplelike value, std::inde
     // in the same fashion, we can fold over 2 functions by doing '( ( f(args), g(args) ), ... )'
 }
 
-template <class Arraylike, std::enable_if_t<is_stringified_as_array_v<Arraylike>, bool>>
-void append_stringified(std::string& str, const Arraylike& value) {
-    str += "{ ";
-    for (auto it = value.begin();;) {
-        append_stringified(str, *it);
-        if (++it != value.end()) str += ", "; // prevents trailing comma
-        else break;
-    }
-    str += " }";
-}
-
-template <template <typename...> class Tuplelike, typename... Args,
-          std::enable_if_t<is_stringified_as_tuple_v<Tuplelike<Args...>>, bool>>
-void append_stringified(std::string& str, const Tuplelike<Args...>& value) {
+template <template <class...> class Tuplelike, class... Args>
+void _append_stringified_tuple(std::string& str, const Tuplelike<Args...>& value) {
     str += "< ";
     _append_stringified_tuple_impl(str, value, std::index_sequence_for<Args...>{});
     str += " >";
 }
 
+template <class T>
+void _append_stringified_printable(std::string& str, const T& value) {
+    str += (std::ostringstream() << value).str(); // rather slow but at this point there is no other option
+}
+
+// --- Public API ---
+// ------------------
+
+template <class T>
+void append_stringified(std::string& str, const T& value) {
+    // Bool
+    if constexpr (std::is_same_v<T, bool>) _append_stringified_bool(str, value);
+    // Char
+    else if constexpr (std::is_same_v<T, char>) _append_stringified_stringlike(str, value);
+    // Integral
+    else if constexpr (std::is_integral_v<T>) _append_stringified_integer(str, value);
+    // Floating-point
+    else if constexpr (std::is_floating_point_v<T>) _append_stringified_float(str, value);
+    // 'std::string_view'-convertible (most strings and string-like types)
+    else if constexpr (std::is_convertible_v<T, std::string_view>) _append_stringified_stringlike(str, value);
+    // 'std::string'-convertible (some "nastier" string-like types, mainly 'std::path')
+    else if constexpr (std::is_convertible_v<T, std::string>) _append_stringified_string_convertible(str, value);
+    // Array-like
+    else if constexpr (_has_begin_v<T> && _has_end_v<T>) _append_stringified_array(str, value);
+    // Tuple-like
+    else if constexpr (_has_get_v<T> && _has_tuple_size_v<T>) _append_stringified_tuple(str, value);
+    // 'std::ostream' printable
+    else if constexpr (_has_ostream_insert_v<T>) _append_stringified_printable(str, value);
+    // No valid stringification exists
+    else static_assert(_always_false_v<T>, "No valid stringification exists for the type.");
+
+    // Note: Using if-constexpr chain here allows us to pick and choose priority of different branches,
+    // removing any possible ambiguity we could encounter doing things through SFINAE or overloads.
+}
+
 template <class... Args>
 std::string stringify(Args&&... args) {
     std::string buffer;
-    (utl::log::append_stringified(buffer, std::forward<Args>(args)), ...);
+    (append_stringified(buffer, std::forward<Args>(args)), ...);
     return buffer;
 }
 
@@ -1575,7 +1561,6 @@ template <class... Args>
 void println(Args&&... args) {
     std::cout << stringify(std::forward<Args>(args)...) << '\n';
 }
-
 
 // ===============
 // --- Options ---
@@ -1778,7 +1763,7 @@ public:
 
 class Logger {
 private:
-    inline static std::vector<Sink>          sinks;
+    inline static std::vector<Sink>        sinks;
     inline static std::list<std::ofstream> managed_files;
     // we don't want 'managed_files' to reallocate its elements at any point
     // since that would leave corresponding sinks with dangling references,
@@ -2034,7 +2019,7 @@ template <typename FloatType, std::enable_if_t<std::is_floating_point<FloatType>
 
 // Workaround for 'static_assert(false)' making program ill-formed even
 // when placed inide an 'if constexpr' branch that never compiles.
-// 'static_assert(_always_false_v<T)' on the the other hand doesn't,
+// 'static_assert(_always_false_v<T>)' on the the other hand doesn't,
 // which means we can use it to mark branches that should never compile.
 template <class>
 inline constexpr bool _always_false_v = false;
@@ -2162,15 +2147,17 @@ template <typename IntType, std::enable_if_t<std::is_integral<IntType>::value, b
 //
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+#include <string_view>
 #if !defined(UTL_PICK_MODULES) || defined(UTLMODULE_MVL)
 #ifndef UTLHEADERGUARD_MVL
 #define UTLHEADERGUARD_MVL
 
 // _______________________ INCLUDES _______________________
 
-#include <algorithm>        // swap(), find(), count(), is_sorted(), min_element(),
-                            // max_element(), sort(), stable_sort(), min(), max(), remove_if(), copy()
-#include <cassert>          // assert() // Note: Perhaps temporary
+#include <algorithm> // swap(), find(), count(), is_sorted(), min_element(),
+                     // max_element(), sort(), stable_sort(), min(), max(), remove_if(), copy()
+#include <cassert>   // assert() // Note: Perhaps temporary
+#include <charconv>
 #include <cmath>            // isfinite()
 #include <cstddef>          // size_t, ptrdiff_t, nullptr_t
 #include <functional>       // reference_wrapper<>, multiplies<>
@@ -2344,6 +2331,152 @@ utl_mvl_define_trait_has_member(_is_sparse_entry_2d, is_sparse_entry_2d);
 
 // MARK:
 
+// =======================
+// --- Stringification ---
+// =======================
+
+// Stringification implementation from 'utl::log' module, see its source for more notes.
+
+// --- Internal type traits ---
+// ----------------------------
+
+utl_mvl_define_trait(_has_begin, ++std::declval<T>().begin());
+utl_mvl_define_trait(_has_end, ++std::declval<T>().end());
+utl_mvl_define_trait(_has_get, std::get<0>(std::declval<T>()));
+utl_mvl_define_trait(_has_tuple_size, std::tuple_size<T>::value);
+utl_mvl_define_trait(_has_ostream_insert, std::declval<std::ostream>() << std::declval<T>());
+
+// --- Internal utils ---
+// ----------------------
+
+template <class>
+inline constexpr bool _always_false_v = false;
+
+template <typename T>
+constexpr int _log_10_ceil(T num) {
+    return num < 10 ? 1 : 1 + _log_10_ceil(num / 10);
+}
+
+template <typename T>
+constexpr std::size_t _max_float_digits =
+    4 + std::numeric_limits<T>::max_digits10 + std::max(2, _log_10_ceil(std::numeric_limits<T>::max_exponent10));
+
+// --- Stringifiers ---
+// --------------------
+
+template <class T>
+void append_stringified(std::string& str, const T& value);
+
+void _append_stringified_bool(std::string& str, bool value) { str += value ? "true" : "false"; }
+
+template <class T>
+void _append_stringified_integer(std::string& str, T value) {
+    std::array<char, std::numeric_limits<T>::digits10> buffer;
+    const auto [number_end_ptr, error_code] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+
+    if (error_code != std::errc())
+        throw std::runtime_error(
+            "Integer stringification encountered std::to_chars() formatting error while serializing a value.");
+
+    str.append(buffer.data(), number_end_ptr - buffer.data());
+}
+
+template <class T>
+void _append_stringified_float(std::string& str, T value) {
+    std::array<char, _max_float_digits<T>> buffer;
+    constexpr int                          precision = 5;
+    // in 'mvl' specifically we reduce default precision to make matrices format nices,
+    // if user wants full precision they can always pass another stringifier, for example, `std::to_string()`
+    const auto [number_end_ptr, error_code] =
+        std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::general, precision);
+
+    if (error_code != std::errc())
+        throw std::runtime_error(
+            "Float stringification encountered std::to_chars() formatting error while serializing a value.");
+
+    str.append(buffer.data(), number_end_ptr - buffer.data());
+}
+
+template <class T>
+void _append_stringified_stringlike(std::string& str, const T& value) {
+    str += value;
+}
+
+template <class T>
+void _append_stringified_string_convertible(std::string& str, const T& value) {
+    str += std::string(value);
+}
+
+template <class T>
+void _append_stringified_array(std::string& str, const T& value) {
+    str += "{ ";
+    if (value.begin() != value.end())
+        for (auto it = value.begin();;) {
+            append_stringified(str, *it);
+            if (++it == value.end()) break;
+            str += ", ";
+        }
+    str += " }";
+}
+
+template <class Tuplelike, std::size_t... Idx>
+void _append_stringified_tuple_impl(std::string& str, Tuplelike value, std::index_sequence<Idx...>) {
+    ((Idx == 0 ? "" : str += ", ", append_stringified(str, std::get<Idx>(value))), ...);
+}
+
+template <template <class...> class Tuplelike, class... Args>
+void _append_stringified_tuple(std::string& str, const Tuplelike<Args...>& value) {
+    str += "< ";
+    _append_stringified_tuple_impl(str, value, std::index_sequence_for<Args...>{});
+    str += " >";
+}
+
+template <class T>
+void _append_stringified_printable(std::string& str, const T& value) {
+    str += (std::ostringstream() << value).str();
+}
+
+// --- Public API ---
+// ------------------
+
+template <class T>
+void append_stringified(std::string& str, const T& value) {
+    if constexpr (std::is_same_v<T, bool>) _append_stringified_bool(str, value);
+    else if constexpr (std::is_same_v<T, char>) _append_stringified_stringlike(str, value);
+    else if constexpr (std::is_integral_v<T>) _append_stringified_integer(str, value);
+    else if constexpr (std::is_floating_point_v<T>) _append_stringified_float(str, value);
+    else if constexpr (std::is_convertible_v<T, std::string_view>) _append_stringified_stringlike(str, value);
+    else if constexpr (std::is_convertible_v<T, std::string>) _append_stringified_string_convertible(str, value);
+    else if constexpr (_has_begin_v<T> && _has_end_v<T>) _append_stringified_array(str, value);
+    else if constexpr (_has_get_v<T> && _has_tuple_size_v<T>) _append_stringified_tuple(str, value);
+    else if constexpr (_has_ostream_insert_v<T>) _append_stringified_printable(str, value);
+    else static_assert(_always_false_v<T>, "No valid stringification exists for the type.");
+}
+
+template <class... Args>
+std::string stringify(Args&&... args) {
+    std::string buffer;
+    (append_stringified(buffer, std::forward<Args>(args)), ...);
+    return buffer;
+}
+
+// We wrap stringifying function in functor-class so we can use it a default template callable argument.
+// Templates can't infer template parameters from default arguments:
+//
+//    template<class Func>
+//    void do_stuff(Func f = default_f);  // <- CAN'T infer 'Func'
+//
+//    template<class Func = default_functor>
+//    void do_stuff(Func f = Func());     // <- CAN infer 'Func'
+//
+// which is why the "standard" way of doing it (standard as in used by STL containers) is to use functors as default
+// template arguments, if user passes a callable it will override the 'Func' and we get the usual behaviour.
+//
+template <class T>
+struct default_stringifier {
+    [[nodiscard]] std::string operator()(const T& value) const { return stringify(value); }
+};
+
 // ======================
 // --- Codegen Macros ---
 // ======================
@@ -2369,13 +2502,6 @@ using _has_signature_enable_if = std::enable_if_t<std::is_convertible_v<FuncType
 template <class T>
 [[nodiscard]] std::unique_ptr<T[]> _make_unique_ptr_array(size_t size) {
     return std::unique_ptr<T[]>(new T[size]);
-}
-
-// Variadic stringification,
-// mostly used to build error messages in exceptions.
-template <class... Args>
-[[nodiscard]] std::string _stringify(const Args&... args) {
-    return (std::ostringstream() << ... << args).str(); // quick & dirty way to stringify things
 }
 
 // Marker for uncreachable code
@@ -2725,6 +2851,7 @@ using _are_tensors_with_same_value_type_enable_if =
 
 utl_mvl_define_tensor_param_restriction(_is_sparse_tensor, type == Type::SPARSE);
 utl_mvl_define_tensor_param_restriction(_is_nonsparse_tensor, type != Type::SPARSE);
+utl_mvl_define_tensor_param_restriction(_is_matrix_tensor, dimension == Dimension::MATRIX);
 
 // ===========================
 // --- Data Member Classes ---
@@ -3066,14 +3193,14 @@ private:
     void _bound_check_idx(size_type idx) const {
         if (idx >= this->size())
             throw std::out_of_range(
-                _stringify("idx (which is ", idx, ") >= this->size() (which is ", this->size(), ")"));
+                stringify("idx (which is ", idx, ") >= this->size() (which is ", this->size(), ")"));
     }
 
     utl_mvl_reqs(dimension == Dimension::MATRIX) void _bound_check_ij(size_type i, size_type j) const {
         if (i >= this->rows())
-            throw std::out_of_range(_stringify("i (which is ", i, ") >= this->rows() (which is ", this->rows(), ")"));
+            throw std::out_of_range(stringify("i (which is ", i, ") >= this->rows() (which is ", this->rows(), ")"));
         else if (j >= this->cols())
-            throw std::out_of_range(_stringify("j (which is ", j, ") >= this->cols() (which is ", this->cols(), ")"));
+            throw std::out_of_range(stringify("j (which is ", j, ") >= this->cols() (which is ", this->cols(), ")"));
     }
 
     // - Dense & strided implementations -
@@ -3158,7 +3285,7 @@ public:
         // Return this->size() if {i, j} wasn't found. Throw with bound checking.
         if constexpr (self::params::checking == Checking::BOUNDS)
             if (idx == this->size())
-                throw std::out_of_range(_stringify("Index { ", i, ", ", j, "} in not a part of sparse matrix"));
+                throw std::out_of_range(stringify("Index { ", i, ", ", j, "} in not a part of sparse matrix"));
         return idx;
     }
 
@@ -4105,163 +4232,151 @@ using ConstSparseMatrixView =
 
 namespace format {
 
-// TODO: Formats 'as_matrix', 'as_dictionary', 'as_json_array', 'as_raw_text' need 1D overloads
+// --- Implementation ---
+// ----------------------
 
-// - Human-readable formats -
+// The "header" of all human-readable formats that displays
+// some meta info with tensor type and dimensions.
+template <utl_mvl_tensor_arg_defs>
+[[nodiscard]] std::string _tensor_meta_string(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor) {
+    std::string buffer;
 
-constexpr std::size_t max_displayed_rows      = 70;
-constexpr std::size_t max_displayed_cols      = 40;
-constexpr std::size_t max_displayed_flat_size = 500;
-constexpr auto        content_indent          = "  ";
+    if constexpr (_type == Type::DENSE) buffer += "Dense";
+    if constexpr (_type == Type::STRIDED) buffer += "Strided";
+    if constexpr (_type == Type::SPARSE) buffer += "Sparse";
+    if constexpr (_dimension == Dimension::VECTOR) buffer += stringify(" vector [size = ", tensor.size(), "]:\n");
+    if constexpr (_dimension == Dimension::MATRIX)
+        buffer += stringify(" matrix [size = ", tensor.size(), "] (", tensor.rows(), " x ", tensor.cols(), "):\n");
 
-template <class T, Dimension dimension, Type type, Ownership ownership, Checking checking, Layout layout>
+    return buffer;
+}
+
+// Human-readable formats automatically collapse matrices
+// that are too  large to be reasonably parsed by a human
+constexpr std::size_t _max_displayed_flat_size = 30 * 30;
+
+template <utl_mvl_tensor_arg_defs>
+[[nodiscard]] std::string _as_too_large(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor) {
+    return stringify(_tensor_meta_string(tensor), "  <hidden due to large size>\n");
+}
+
+// Generic method to do "dense matrix print" with given delimers.
+// Cuts down on repitition since a lot of formats only differ in the delimers used.
+template <class T, Type type, Ownership ownership, Checking checking, Layout layout, class Func>
 [[nodiscard]] std::string
-_stringify_metainfo(const GenericTensor<T, dimension, type, ownership, checking, layout>& tensor) {
-    std::ostringstream ss;
-    ss << "Tensor [size = " << tensor.size() << "] (" << tensor.rows() << " x " << tensor.cols() << "):\n";
-    return ss.str();
+_generic_dense_format(const GenericTensor<T, Dimension::MATRIX, type, ownership, checking, layout>& tensor,      //
+                      std::string_view                                                              begin,       //
+                      std::string_view                                                              row_begin,   //
+                      std::string_view                                                              row_delimer, //
+                      std::string_view                                                              row_end,     //
+                      std::string_view                                                              end,         //
+                      Func                                                                          stringifier  //
+) {
+    if (tensor.empty()) return (std::string() += begin) += end;
+
+    Matrix<std::string> strings(tensor.rows(), tensor.cols());
+
+    // Stringify
+    if constexpr (type == Type::SPARSE) strings.fill("-");
+    tensor.for_each([&](const T& elem, std::size_t i, std::size_t j) { strings(i, j) = stringifier(elem); });
+    // this takes care of sparsity, if the matrix is sparse we prefill 'strings' with "-" and then fill appropriate
+    // {i, j} with actual stringified values from the tensor. For dense matrices no unnecessary work is done.
+
+    // Get column widths - we want matrix to format nice and aligned
+    std::vector<std::size_t> column_widths(strings.cols(), 0);
+    for (std::size_t i = 0; i < strings.rows(); ++i)
+        for (std::size_t j = 0; j < strings.cols(); ++j)
+            column_widths[j] = std::max(column_widths[j], strings(i, j).size());
+
+    // Format with proper alignment
+    std::string buffer(begin);
+    for (std::size_t i = 0; i < strings.rows(); ++i) {
+        buffer += row_begin;
+        for (std::size_t j = 0; j < strings.cols(); ++j) {
+            if (strings(i, j).size() < column_widths[j]) buffer.append(column_widths[j] - strings(i, j).size(), ' ');
+            buffer += strings(i, j);
+            if (j + 1 < strings.cols()) buffer += row_delimer;
+        }
+        buffer += row_end;
+    }
+    buffer += end;
+
+    return buffer;
 }
 
-template <class T, Dimension dimension, Type type, Ownership ownership, Checking checking, Layout layout>
-[[nodiscard]] std::string _as_too_large(const GenericTensor<T, dimension, type, ownership, checking, layout>& tensor) {
-    std::ostringstream ss;
-    ss << _stringify_metainfo(tensor) << content_indent << "<hidden due to large size>\n";
-    return ss.str();
+// --- Human-readable formats ---
+// ------------------------------
+
+template <utl_mvl_tensor_arg_defs, class Func = default_stringifier<T>>
+[[nodiscard]] std::string as_vector(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor, Func stringifier = Func()) {
+    if (tensor.size() > _max_displayed_flat_size) return _as_too_large(tensor);
+
+    std::string buffer = _tensor_meta_string(tensor);
+
+    buffer += "  { ";
+    for (std::size_t idx = 0; idx < tensor.size(); ++idx) {
+        buffer += stringifier(tensor[idx]);
+        if (idx + 1 < tensor.size()) buffer += ", ";
+    }
+    buffer += " }\n";
+
+    return buffer;
 }
 
-template <class T>
-[[nodiscard]] std::string _ss_stringify(const T& value) {
-    std::ostringstream ss;
-    ss.flags(std::ios::boolalpha);
-    ss << value;
-    return ss.str();
-}
+template <utl_mvl_tensor_arg_defs, class Func = default_stringifier<T>>
+[[nodiscard]] std::string as_dictionary(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor,
+                                        Func                                          stringifier = Func()) {
+    if (tensor.size() > _max_displayed_flat_size) return _as_too_large(tensor);
 
-template <class T>
-[[nodiscard]] std::string _ss_stringify_for_json(const T& value) {
-    // Modification of '_ss_stringify()' that properly handles floats for JSON
-    std::ostringstream ss;
-    ss.flags(std::ios::boolalpha);
+    std::string buffer = _tensor_meta_string(tensor);
 
-    if constexpr (std::is_floating_point_v<T>) {
-        if (std::isfinite(value)) ss << value;
-        else ss << "\"" << value << "\"";
+    if constexpr (_dimension == Dimension::MATRIX) {
+        tensor.for_each([&](const T& elem, std::size_t i, std::size_t j) {
+            buffer += stringify("(", i, ", ", j, ") = ");
+            buffer += stringifier(elem);
+            buffer += '\n';
+        });
     } else {
-        ss << value;
+        tensor.for_each([&](const T& elem, std::size_t i) {
+            buffer += stringify("(", i, ") = ");
+            buffer += stringifier(elem);
+            buffer += '\n';
+        });
     }
 
-    return ss.str();
+    return buffer;
 }
 
-template <class T, Dimension dimension, Type type, Ownership ownership, Checking checking, Layout layout>
-[[nodiscard]] std::string as_vector(const GenericTensor<T, dimension, type, ownership, checking, layout>& tensor) {
-    if (tensor.size() > max_displayed_flat_size) return _as_too_large(tensor);
+template <utl_mvl_tensor_arg_defs, class Func = default_stringifier<T>>
+[[nodiscard]] std::string as_matrix(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor, Func stringifier = Func()) {
+    if (tensor.size() > _max_displayed_flat_size) return _as_too_large(tensor);
 
-    std::ostringstream ss;
-    ss << _stringify_metainfo(tensor);
-
-    ss << content_indent << "{ ";
-    for (std::size_t idx = 0; idx < tensor.size(); ++idx) ss << tensor[idx] << (idx + 1 < tensor.size() ? ", " : "");
-    ss << " }\n";
-
-    return ss.str();
+    return _generic_dense_format(tensor, _tensor_meta_string(tensor), "  [ ", " ", " ]\n", "", stringifier);
 }
 
-template <class T, Type type, Ownership ownership, Checking checking, Layout layout>
-[[nodiscard]] std::string
-as_matrix(const GenericTensor<T, Dimension::MATRIX, type, ownership, checking, layout>& tensor) {
-    if (tensor.rows() > max_displayed_rows || tensor.cols() > max_displayed_cols) return _as_too_large(tensor);
+// --- Export formats ---
+// ----------------------
 
-    // Take care of sparsity using 'fill-ctor + for_each()' - if present, missing elements will just stay "default"
-    GenericTensor<std::string, Dimension::MATRIX, Type::DENSE, Ownership::CONTAINER, Checking::NONE, Layout::RC>
-        strings(tensor.rows(), tensor.cols(), "-");
-    tensor.for_each([&](const T& elem, std::size_t i, std::size_t j) { strings(i, j) = _ss_stringify(elem); });
-
-    // Get appropriate widths for each column - we want matrix to format nicely
-    std::vector<std::size_t> column_widths(strings.cols());
-    for (std::size_t i = 0; i < strings.rows(); ++i)
-        for (std::size_t j = 0; j < strings.cols(); ++j)
-            column_widths[j] = std::max(column_widths[j], strings(i, j).size());
-
-    // Output the formatted result
-    std::ostringstream ss;
-    ss << _stringify_metainfo(tensor);
-
-    for (std::size_t i = 0; i < strings.rows(); ++i) {
-        ss << content_indent << "[ ";
-        for (std::size_t j = 0; j < strings.cols(); ++j)
-            ss << std::setw(column_widths[j]) << strings(i, j) << (j + 1 < strings.cols() ? " " : "");
-        ss << " ]\n";
-    }
-
-    return ss.str();
+template <utl_mvl_tensor_arg_defs, class Func = default_stringifier<T>>
+[[nodiscard]] std::string as_raw(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor, Func stringifier = Func()) {
+    return _generic_dense_format(tensor, "", "", " ", "\n", "", stringifier);
 }
 
-template <class T, Type type, Ownership ownership, Checking checking, Layout layout>
-[[nodiscard]] std::string
-as_dictionary(const GenericTensor<T, Dimension::MATRIX, type, ownership, checking, layout>& tensor) {
-    if (tensor.size() > max_displayed_flat_size) return _as_too_large(tensor);
-
-    std::ostringstream ss;
-    ss << _stringify_metainfo(tensor);
-
-    tensor.for_each([&](const T& elem, std::size_t i, std::size_t j) {
-        ss << content_indent << "(" << i << ", " << j << ") = " << _ss_stringify(elem) << "\n";
-    });
-
-    return ss.str();
+template <utl_mvl_tensor_arg_defs, class Func = default_stringifier<T>>
+[[nodiscard]] std::string as_csv(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor, Func stringifier = Func()) {
+    return _generic_dense_format(tensor, "", "", ", ", "\n", "", stringifier);
 }
 
-// - Export formats -
-
-template <class T, Type type, Ownership ownership, Checking checking, Layout layout>
-[[nodiscard]] std::string
-as_raw_text(const GenericTensor<T, Dimension::MATRIX, type, ownership, checking, layout>& tensor) {
-    // Take care of sparsity using 'fill-ctor + for_each()' - if present, missing elements will just stay "default"
-    GenericTensor<std::string, Dimension::MATRIX, Type::DENSE, Ownership::CONTAINER, Checking::NONE, Layout::RC>
-        strings(tensor.rows(), tensor.cols(), _ss_stringify(T()));
-    tensor.for_each([&](const T& elem, std::size_t i, std::size_t j) { strings(i, j) = _ss_stringify(elem); });
-
-    // Output the formatted result
-    std::ostringstream ss;
-
-    for (std::size_t i = 0; i < strings.rows(); ++i) {
-        for (std::size_t j = 0; j < strings.cols(); ++j) ss << strings(i, j) << (j + 1 < strings.cols() ? " " : "");
-        ss << " \n";
-    }
-    ss << "\n";
-
-    return ss.str();
+template <utl_mvl_tensor_arg_defs, class Func = default_stringifier<T>>
+[[nodiscard]] std::string as_json(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor, Func stringifier = Func()) {
+    return _generic_dense_format(tensor, "[\n", "    [ ", ", ", " ]\n", "]\n", stringifier);
 }
 
-template <class T, Type type, Ownership ownership, Checking checking, Layout layout>
-[[nodiscard]] std::string
-as_json_array(const GenericTensor<T, Dimension::MATRIX, type, ownership, checking, layout>& tensor) {
-    // Take care of sparsity using 'fill-ctor + for_each()' - if present, missing elements will just stay "default"
-    GenericTensor<std::string, Dimension::MATRIX, Type::DENSE, Ownership::CONTAINER, Checking::NONE, Layout::RC>
-        strings(tensor.rows(), tensor.cols(), _ss_stringify(T()));
-    tensor.for_each([&](const T& elem, std::size_t i, std::size_t j) { strings(i, j) = _ss_stringify(elem); });
-
-    // Get appropriate widths for each column - we want matrix to format nicely
-    std::vector<std::size_t> column_widths(strings.cols());
-    for (std::size_t i = 0; i < strings.rows(); ++i)
-        for (std::size_t j = 0; j < strings.cols(); ++j)
-            column_widths[j] = std::max(column_widths[j], strings(i, j).size());
-
-    // Output the formatted result
-    std::ostringstream ss;
-
-    ss << "[\n";
-    for (std::size_t i = 0; i < strings.rows(); ++i) {
-        ss << "  [ ";
-        for (std::size_t j = 0; j < strings.cols(); ++j)
-            ss << std::setw(column_widths[j]) << strings(i, j) << (j + 1 < strings.cols() ? ", " : "");
-        ss << " ]" << (i + 1 < strings.rows() ? "," : "") << " \n";
-    }
-    ss << "]\n";
-
-    return ss.str();
+template <utl_mvl_tensor_arg_defs, class Func = default_stringifier<T>>
+[[nodiscard]] std::string as_latex(const GenericTensor<utl_mvl_tensor_arg_vals>& tensor, Func stringifier = Func()) {
+    return _generic_dense_format(tensor, "\\begin{pmatrix}\n", "  ", " & ", " \\\\\n", "\\end{pmatrix}\n", stringifier);
 }
+
 
 } // namespace format
 
@@ -4506,7 +4621,7 @@ L& operator+=(L&& left, R&& right) {
 template <class L, class R, _are_tensors_with_same_value_type_enable_if<L, R> = true,
           class value_type                               = typename std::decay_t<L>::value_type,
           _has_assignment_op_minus_enable_if<value_type> = true>
-auto operator-=(L&& left, R&& right) {
+L& operator-=(L&& left, R&& right) {
     return (left = std::move(left) - right);
 }
 
@@ -7074,36 +7189,24 @@ template <class T>
 #include <ios>              // streamsize, ios_base::fmtflags, ios
 #include <iostream>         // cout
 #include <ostream>          // ostream
+#include <sstream>          // ostringstream
 #include <string>           // string
+#include <type_traits>      // is_arithmetic_v<>, is_same_v<>
 #include <vector>           // vector<>
 
 // ____________________ DEVELOPER DOCS ____________________
 
 // Functions used to build and render simple ASCII table in console.
 //
-// # ::create() #
-// Sets up table with given number of columns and their widths.
+// Tries to be simple and minimize boilerplate, exposes a LaTeX-like API.
+// In fact this is for a reason - these tables can be formatted for a quick LaTeX export
+// by enabling a 'set_latex_mode(true)'.
 //
-// # ::set_formats() #
-// (optional) Sets up column formats for better display
-//
-// # ::set_ostream() #
-// (optional) Select 'std::ostream' to which all output gets forwarded. By default 'std::cout' is selected.
-//
-// # ::NONE, ::FIXED(), ::DEFAULT(), ::SCIENTIFIC(), ::BOOL() #
-// Format flags with following effects:
-// > NONE          - Use default C++ formats
-// > FIXED(N)      - Display floats in fixed form with N decimals, no argument assumes N = 3
-// > DEFAULT(N)    - Display floats in default form with N decimals, no argument assumes N = 6
-// > SCIENTIFIC(N) - Display floats in scientific form with N decimals, no argument assumes N = 3
-// > BOOL          - Display booleans as text
-//
-// # ::cell() #
-// Draws a single table cell, if multiple arguments are passed, draws each one in a new cell.
-// Accepts any type with a defined "<<" ostream operator.
-//
-// # ::hline() #
-// Draws horizontal line in a table. Similar to LaTeX '\hline'.
+// As of now the implementation is short but quite frankly ugly, it feels like with some thought
+// it could be generalized much better to support multiple styles and perform faster, however there
+// is ~0 need for this to be fast since it's mean for human-readable tables and not massive data export.
+// Adding more styles while nice also doesn't seem like an important thing as of now so the old implementation
+// is left to be as is.
 
 // ____________________ IMPLEMENTATION ____________________
 
@@ -7143,6 +7246,7 @@ constexpr ColumnFormat BOOL = {std::ios::boolalpha, 3};
 inline std::vector<_Column> _columns;
 inline std::size_t          _current_column = 0;
 inline std::ostream*        _output_stream  = &std::cout;
+inline bool                 _latex_mode     = false;
 
 // ===================
 // --- Table Setup ---
@@ -7162,16 +7266,73 @@ inline void set_formats(std::initializer_list<ColumnFormat>&& formats) {
 
 inline void set_ostream(std::ostream& new_ostream) { _output_stream = &new_ostream; }
 
+inline void set_latex_mode(bool toggle) { _latex_mode = toggle; }
+
 // =======================
 // --- Table Rendering ---
 // =======================
 
+// We want to only apply additional typesetting to "actual mathematical numbers", not bools & chars
+template <class T>
+constexpr bool _is_arithmetic_number_v =
+    std::is_arithmetic_v<T> && !std::is_same_v<T, bool> && !std::is_same_v<T, char>;
+
+[[nodiscard]] std::string _trim_left(const std::string& str, char trimmed_char) {
+    std::string res = str;
+    res.erase(0, res.find_first_not_of(trimmed_char));
+    return res;
+}
+
+// Function that adds some LaTeX decorators to appropriate types
+template <class T>
+void _append_decorated_value(std::ostream& os, const T& value) {
+    using V = std::decay_t<T>;
+
+    if (!_latex_mode) {
+        os << value;
+        return;
+    }
+
+    if constexpr (_is_arithmetic_number_v<V>) {
+        // In order to respect format flags of the table, we have to copy fmt into a stringstream
+        // and use IT to stringify a number, simple 'std::to_string()' won't do it here
+        std::ostringstream ss;
+        ss.copyfmt(os);
+        ss.width(0); // cancel out 'std::setw()' that was copied with all the other flags
+        ss << value;
+        std::string number_string = ss.str();
+
+        // Convert scientific form number to a LaTeX-friendly form,
+        // for example, "1.3e-15" becomes "1.3 \cdot 10^{-15}"
+        const std::size_t e_index = number_string.find('e');
+        if (e_index != std::string::npos) {
+            const std::string mantissa = number_string.substr(0, e_index - 1);
+            const char        sign     = number_string.at(e_index + 1);
+            const std::string exponent = number_string.substr(e_index + 2);
+
+            number_string.clear();
+            number_string += mantissa;
+            number_string += " \\cdot 10^{";
+            if (sign == '-') number_string += sign;
+            number_string += _trim_left(exponent, '0');
+            number_string += '}';
+        }
+
+        // Typeset numbers as formulas
+        os << "$" << number_string << "$";
+    } else os << value;
+}
+
 inline void cell(){};
 
-template <typename T, typename... Types>
+template <class T, class... Types>
 void cell(T value, const Types... other_values) {
-    const std::string left_cline      = (_current_column == 0) ? "|" : "";
-    const std::string right_cline     = (_current_column == _columns.size() - 1) ? "|\n" : "|";
+    const auto left_delimer  = _latex_mode ? "" : "|";
+    const auto delimer       = _latex_mode ? " & " : "|";
+    const auto right_delimer = _latex_mode ? " \\\\\n" : "|\n";
+
+    const std::string left_cline      = (_current_column == 0) ? left_delimer : "";
+    const std::string right_cline     = (_current_column == _columns.size() - 1) ? right_delimer : delimer;
     const _ios_flags  format          = _columns[_current_column].col_format.flags;
     const uint        float_precision = _columns[_current_column].col_format.precision;
 
@@ -7185,7 +7346,9 @@ void cell(T value, const Types... other_values) {
     (*_output_stream).precision(float_precision);
 
     // Print
-    (*_output_stream) << left_cline << std::setw(_columns[_current_column].width) << value << right_cline;
+    (*_output_stream) << left_cline << std::setw(_columns[_current_column].width);
+    _append_decorated_value(*_output_stream, value);
+    (*_output_stream) << right_cline;
 
     // Return old stream state
     (*_output_stream).copyfmt(old_state);
@@ -7197,9 +7360,14 @@ void cell(T value, const Types... other_values) {
 }
 
 inline void hline() {
-    (*_output_stream) << "|";
-    for (const auto& col : _columns) (*_output_stream) << std::string(static_cast<std::size_t>(col.width), '-') << "|";
-    (*_output_stream) << "\n";
+    if (_latex_mode) {
+        (*_output_stream) << "\\hline\n";
+    } else {
+        (*_output_stream) << "|";
+        for (const auto& col : _columns)
+            (*_output_stream) << std::string(static_cast<std::size_t>(col.width), '-') << "|";
+        (*_output_stream) << "\n";
+    }
 }
 
 } // namespace utl::table

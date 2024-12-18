@@ -50,6 +50,14 @@
 \usepackage{etoolbox}
 \apptocmd{\sloppy}{\hbadness 10000\relax}{}{}
 
+% Алгоритмы %
+\usepackage{algorithm2e} % texlive-science
+\RestyleAlgo{ruled}
+\SetKwData{Assume}{Assumptions}
+
+% Уменьшаем пробел вокруг ":" в формулах %
+\DeclareMathSymbol{:}{\mathord}{operators}{"3A}
+
 % Делаем verbatim меньше %
 \usepackage{verbatim}
 
@@ -199,8 +207,6 @@ c = \dfrac{N_{var}}{N_{var} + 1} \epsilon.
 где $N_{var}$ --- номер варианта (совпадает с номером студента в списке в журнале
 группы), $\epsilon$ - параметр, значение которого задается далее.
 
-Нужно выполнить следующие задания:
-
 \subsection{Задание 1}
 
 Взять матрицу $А$ для значения $\epsilon = 0.1$, убрать последний столбец и сформировать из первых $9$ столбцов матрицу $\hat{A}$ размера $10 \times 9$. Решить линейную задачу наименьших квадратов для вектора невязки
@@ -234,48 +240,137 @@ r = \hat{A} x - b,
 \item Linear Least Squares с помощью QR-разложения.
 \end{itemize}
 
-Расчетная реализация всех алгоритмов выполнена на языке \texttt{C++} с использованием библиотеки \texttt{Eigen} для базовых матричных операций. Для отладки программы и проверки корректности результатов реализован вспомогательный скрипт на \texttt{Wolfram Mathematica}, использующий встроенные методы для получения необходимых разложений.
+Расчетная реализация всех алгоритмов выполнена на языке \texttt{C++} с использованием библиотеки \texttt{Eigen} для базовых матричных операций. Для отладки программы и проверки корректности результатов реализован вспомогательный скрипт на \texttt{Wolfram Mathematica}, использующий встроенные методы для получения необходимых разложений. При указании асимптотической сложности алгоритмов далее будет подразумеваться $m \sim n$.
 
-Изначальная форма алгоритма QR-разложения имеет следующий вид:
-\begin{smallverbatim}
-----------------------------------------------------------------------
--   Q_wave = I;                                                      -
--   R_wave = A;                                                      -
--   for i = 1,min(M-1,N) {                                           -
--      ui                = House(R_wave[i:M, i])      // O(N)        -
--      pi_wave           = I - 2 ui ui^T              // O(N^2)      -
--      pi                = I                          //             -
--      pi[i:M, i:M]      = pi_wave                    //             -
--      R_wave[i:M, i:N]  = pi_wave * R_wave[i:M, i:N] // O(N^3)      -
--      Q_wave[0:M, i:M]  = Q_wave[0:M, i:M] * pi_wave // O(N^3)      -
--   }                                                                -
--   return { Q[0:M, 0:N], R[0:N, 0:N] }                              - 
-----------------------------------------------------------------------
-\end{smallverbatim}
+\subsection{QR-разложение и его эффективная реализация}
 
-В явном виде алгоритм имеет сложность $O(N^4)$, это решается если подставить матрицу $p_i$ явно и расписать матричное умножение как $2$ умножения матрицы на вектор. Приходим к следующему алгоритму:
+Алгоритм QR-разложения имеет следующий вид:
 
-\begin{smallverbatim}
-----------------------------------------------------------------------
--   Q_wave = I;                                                      -
--   R_wave = A;                                                      -
--   for i = 1,min(M-1,N) {                                           -
--      ui                = House(R_wave[i:M, i])          // O(N)    -
--      R_wave[i:M, i:N] -= 2 ui (ui^T * R_wave[i:M, i:N]) // O(N^2)  -
--      Q_wave[0:M, i:M]  -= Q_wave[0:M, i:M] * 2 ui ui^T  // O(N^2)  -
--   }                                                                -
--   return { Q[0:M, 0:N], R[0:N, 0:N] }                              -
-----------------------------------------------------------------------
-\end{smallverbatim}
+\begin{algorithm}[H] % 'H' makes environment non-float
+\caption{QR Factorization (naive)}
+\vspace{4pt}
+\KwData{$n \leq m$}
+\KwIn{$A_{m \times n}$}
+\KwOut{$Q_{m \times n}$, $R_{n \times n}$}
+$\tilde{Q} \gets I_{m \times m}$\;
+$\tilde{R} \gets A_{m \times n}$\;
+\For{$i \gets 1$, $i \leq \min \lbrace m-1, n \rbrace$, $i \gets i + 1$} {
+	$k \gets m - i$\;
+	$u_i \gets \mathrm{HouseholderReflection}(\tilde{R}[i:m, i])_{k \times 1}$\;
+	$\tilde{P}_i \gets I_{k \times k} - 2 u_i u_i^T$\;
+	$P_i \gets I_{m \times m}$\;
+	$P_i[i:m, i:m] \gets \tilde{P}_i$\;
+	$\tilde{Q} \gets \tilde{Q} \cdot P_i$\;
+	$\tilde{R} \gets P_i \cdot \tilde{R}$\;
+}
+$Q \gets \tilde{Q}[1:m, 1:n]$\;
+$R \gets \tilde{R}[1:n, 1:n]$\;
+\end{algorithm}
+\vspace{8pt}
 
-Произведено тестовое QR-разложение матрицы $\hat{A}$, проверена ортогональность матрицы $Q$ и приблизительное совпадение $QR \approx A$. Результаты сходятся с разложением с помощью встроенного метода \texttt{QRDecomposition[ ]} в пакете \texttt{Wolfram Mathematica}.
+\noindent Записанный в явном виде алгоритм QR-разложения имеет сложность $O(n^4)$ в силу наличия матричного умножения, это решается если подставить матрицу $P_i$ явно и расписать матричные умножения как $2$ умножения матрицы на вектор. Приходим к алгоритму, эффективному для практической реализации:
 
-Модификация QR-разложени для метода LLS также позволяет вычислять правую часть $Q^T b$ сразу по ходу разложения с целью экономии вычислительных ресурсов. Алгоритм описан в листинге программы
+\begin{algorithm}[H]
+\caption{QR Factorization}
+\vspace{4pt}
+\KwData{$n \leq m$}
+\KwIn{$A_{m \times n}$}
+\KwOut{$Q_{m \times n}$, $R_{n \times n}$}
+$\tilde{Q} \gets I_{m \times m}$\;
+$\tilde{R} \gets A_{m \times n}$\;
+\For{$i \gets 1$, $i \leq \min \lbrace m-1, n \rbrace$, $i \gets i + 1$} {
+	$k \gets m - i$\;
+	$u_i \gets \mathrm{HouseholderReflection}(\tilde{R}[i:m, i])_{k \times 1}$\;
+	$\tilde{Q}[1:m, i:m] \gets \tilde{Q}[1:m, i:m] - 2 \tilde{Q}[1:m, i:m] \cdot u_i \cdot u_i^T$\;
+	$\tilde{R}[i:m, i:n] \gets \tilde{R}[i:m, i:n] - 2 u_i \cdot (u_i^T \cdot \tilde{R}[i:m, i:n])$\;
+}
+$Q \gets \tilde{Q}[1:m, 1:n]$\;
+$R \gets \tilde{R}[1:n, 1:n]$\;
+\end{algorithm}
+\vspace{8pt}
+
+\noindent Полученный алгоритм имеет сложность $O(n^3)$. Далее, под QR-разложением будет подразумеваться именно эта реализация. $\mathrm{HouseholderReflect()}$ в данном случае является вспомогательной процедурой, имеющей сложность $O(n)$:
+
+\vspace{8pt}
+\begin{algorithm}[H]
+\caption{Householder Reflection}
+\vspace{4pt}
+\KwIn{$x_{k \times 1}$}
+\KwOut{$u_{k \times 1}$}
+$u \gets x_{k \times 1}$\;
+$u[1] \gets \mathrm{sign}(u[1]) ||u||_2$\;
+$u \gets u / ||u||_2$\;
+\end{algorithm}
+\vspace{8pt}
+
+\subsection{Алгоритм LLS и вспомогательные процедуры}
+
+Алгоритм линейной задачи наименьших квадратов имеет следующий вид:
+
+\vspace{8pt}
+\begin{algorithm}[H]
+\caption{LLS}
+\vspace{4pt}
+\KwData{$n \leq m$}
+\KwIn{$A_{m \times n}$, $b_{m \times 1}$}
+\KwOut{$x_{m \times 1}$}
+$\lbrace Q, R \rbrace \gets \mathrm{QRFactorization}(A)$\;
+$x \gets \mathrm{GaussianBackwardsElimination}(R, Q^T \cdot b)$\;
+\end{algorithm}
+\vspace{8pt}
+
+\noindent тут $\mathrm{GaussianBackwardsElimination()}$ --- процедура обратного хода метода Гаусса, имеет следующую реализацию:
+
+\begin{algorithm}[H]
+\caption{Gaussian Backwards Elimination}
+\vspace{4pt}
+\KwData{$A$ is upper-triangular}
+\KwIn{$R_{n \times n}$, $rhs_{n \times 1}$}
+\KwOut{$x_{n \times 1}$}
+$x \gets rhs_{n \times 1}$\;
+\For{$i \gets n$, $i \geq 1$, $i \gets i - 1$} {
+	\For{$j \gets i + 1$, $j \leq n$, $j \gets j + 1$} {
+		$x[i] \gets x[i] - R[i, j] \cdot x[j]$\;
+	}
+	$x[i] \gets x[i] / R[i, i]$\;
+}
+\end{algorithm}
+\vspace{8pt}
+
+\subsection{Улучшение алгоритма LLS}
+
+Алгоритм $\mathrm{LLS}$ можно улучшить если встроить вычисление правой части $Q^T b$ сразу в $\mathrm{QRFactorization}$. Получим следующую модификацию QR-разложения:
+
+\begin{algorithm}[H]
+\caption{QR Factorization for LLS}
+\vspace{4pt}
+\KwData{$n \leq m$}
+\KwIn{$A_{m \times n}$, $b_{m \times 1}$}
+\KwOut{$\beta_{n \times 1}, \; R_{n \times n}$}
+$\tilde{\beta} \gets b_{m \times 1}$\;
+$\tilde{R} \gets A_{m \times n}$\;
+\For{$i \gets 1$, $i \leq \min \lbrace m-1, n \rbrace$, $i \gets i + 1$} {
+	$k \gets m - i$\;
+	$u_i \gets \mathrm{HouseholderReflection}(\tilde{R}[i:m, i])_{k \times 1}$\;
+	$\gamma \gets -2 u_i^T \cdot \tilde{\beta}[i:m]$\;
+	$\tilde{\beta}[i:m] \gets \tilde{\beta}[i:m] + \gamma \cdot u_i$
+	$\tilde{R}[i:m, i:n] \gets \tilde{R}[i:m, i:n] - 2 u_i \cdot (u_i^T \cdot \tilde{R}[i:m, i:n])$\; 
+}
+$\beta \gets \tilde{\beta}[1:n]$\;
+$R \gets \tilde{R}[1:n, 1:n]$\;
+\end{algorithm}
+\vspace{8pt}
+
+\noindent Соответсвенно, разложение в $\mathrm{LLS}$ станет происходить не в $\lbrace Q, R \rbrace$, а сразу в матрицу и вектор правой части СЛАУ $\lbrace Q^T b, R \rbrace$.
+
+\subsection{Результаты}
+
+Произведено тестовое QR-разложение матрицы $\hat{A}$, проверена ортогональность матрицы $Q$ и приблизительное совпадение $QR \approx A$. Результаты сходятся с разложением с помощью встроенного метода \texttt{QRDecomposition[]} в пакете \texttt{Wolfram Mathematica}:
 
 В качестве тестового вектора выбран $x_0: x_i = i^2$. Для него решена задача наименьших квадратов относительно невязки, получен вектор $x_{LLS}$ имеющий следующую норму ошибки:
-\begin{verbatim}
-lls_error_estimate -> 3.990082657206211e-16
-\end{verbatim}
+\[
+err_{LLS} \approx 3.99 \cdot 10^{-16}.
+\]
 
 Результаты LLS также сверены с помощью скрипта.
 
@@ -290,84 +385,203 @@ lls_error_estimate -> 3.990082657206211e-16
 \item $O(N^2)$ QR-разложение для верхне-хессенберговых матриц с вычислением $RQ$;
 
 \item QR-алгоритм со сдвигами и приведением изначальной матрицы к Хессенберговой форме;
+
+\item Метод обратной итерации для определения СВ.
 \end{itemize}
 
-В качестве значений сдвига в QR-алгоритме берется $H_{nn}$, итерации производятся до тех пор пока значение $|H_{n, n-1}|$ не станет меньше некоторого $\epsilon$, после чего $n$-е значение на диагонали считаем найденым и редуцируем задачу к работе с блоком $(n - 1) \times (n - 1)$. Процедура повторяется до достижения максимального числа итераций или редукции $n$ к $2$-м (при нормальном ходе программы ожидается второй исход). Приходим к следующему алгоритму:
+\subsection{QR-алгоритм}
 
-\begin{smallverbatim}
----------------------------------------------------------------------------
--   while (N >= 2 && iteration++ < max_iterations) {                      -
--      sigma = T_shur[N, N]                                     // O(1)   -
--      [ Q, R, RQ ] = qr_factorize_hessenberg(T_shur[1:N, 1:N]) // O(N^2) -
--      T_shur[0:N, 0:N] = RQ + sigma I                          // O(N^2) -
--      if (|T_shur[N, N-1]| < eps) --N                          // O(1)   -
--   }                                                                     -
----------------------------------------------------------------------------
-\end{smallverbatim}
+\begin{algorithm}[H]
+\caption{QR-algorithm (naive)}
+\vspace{4pt}
+\KwIn{$A_{n \times n}$}
+\KwOut{$T_{n \times n}$}
+$T \gets A_{n \times n}$\;
+\For{$it \gets 0$, $it \leq \mathrm{limit}$, $it \gets it + 1$} {
+	$\sigma \gets \sigma_i$\;
+	$\lbrace Q, R \rbrace \gets \mathrm{QRFactorization}(A - \sigma I)$\;
+	$T \gets R \cdot Q + \sigma I$\;
+}
+\end{algorithm}
+\vspace{8pt}
 
-Таким образом, метод редуцируется к сложности $O(N^3)$, без учета хессенберговой структуры имели бы $O(N^4)$. Матрицы $Q$, $R$ в данной реализации не нужны в явном виде, однако программно также определяются для отладочных целей.
+Результатом работы алгоритма является матрица $T$ из разложения Шура $A = Q^* T Q$, элементы главной диагонали данной матрицы являются собственными значениями соответствующего оператора.
 
-В результате работы алгоритма получаем матрицу $T$ из разложения Шура, значения на главной диагонали соответствуют собственным значениям изначальной матрицы.
+Заметим, что на данном этапе сложно сформулировать хороший критерий остановки, поэтому итерируемся фиксированное число раз или до тех пор пока разница между итерациями не станет достаточно малой. Вопрос определения $\sigma_i$ также пока что не конкретезируется, в случае $\sigma_i = 0$ получаем метод обычной QR-итерации без сдвига. И то и другое будет конкретизировано в следующем разделе при улучшении метода.
 
-Получены собственные значения матрицы $A$, результаты сравнения с аналитическими результатами приведены ниже для $\epsilon = 10^{-1}, 10^{-3}, 10^{-6}$:
+Данный алгоритм требует $O(n^4)$ операций т.к. QR-разложение обходится в $O(n^3)$, матричное умножение также требует $O(n^3)$ и ожидаемое число итераций до сходимости считаем пропорциональным размеру.
+
+\subsection{Улучшение алгоритма с помощью приведения к Хессенберговой форме и редукции размерности}
+
+Приведенный выше алгоритм QR-итерации можно улучшить, внесем следующий набор изменений в логику метода:
+
+\begin{enumerate}
+\item Приведем матрицу $A$ к верхне-хессенберговой форме с помощью отражений Хаусхолдера (Hessenberg Reduction), данная операция корректна т.к. не меняет собственные числа матрицы, приведение к верхне-хессенберговой форме требует $O(n^3)$ операций;
+
+\item Реализуем модификацию $\mathrm{QRFactorization}()$ для верхне-хессенберговых матриц, сложность разложения упадет с $O(n^3)$ до $O(n^2)$;
+
+\item Встроим получение матрицы $RQ$ в процедуру QR-разложения, это позволит избежать явного умножения матриц и снизит сложность получения $RQ$ до $O(n^2)$, таким образом вся QR-итерация снизится с $O(n^4)$ до $O(n^3)$;
+
+\item Выберем сдвиг $\sigma_i = T_{nn}$, данный выбор сдвига обеспечивает стремление последней строки к соответствующей строке матрицы Шура, итерации производим до тех пор пока значение $|T_{n, n-1}|$ не станет меньше некоторого $\epsilon$, после чего $n$-е значение на диагонали считаем найденым и редуцируем задачу к работе с блоком $(n - 1) \times (n - 1)$. Получили конкретизацию сдвига и условия остановки.
+\end{enumerate}
+
+Соответсвенно, алгоритм QR-итерации придет к виду:
+
+\vspace{8pt}
+\begin{algorithm}[H]
+\caption{QR-algorithm}
+\vspace{4pt}
+\KwIn{$A_{n \times n}$}
+\KwOut{$T_{n \times n}$}
+$it \gets 0$\;
+$k \gets n$\;
+$T \gets \mathrm{HessenbergReduction}(A)_{n \times n}$\;
+\While{$k \geq 2$ $\&$ $it \leq \mathrm{limit}$} {
+	$\sigma \gets T[k, k]$\;
+	$RQ \gets \mathrm{QRFactorizationForHessenberg}(A - \sigma I)_{k \times k}$\;
+	$T[1:k, 1:k] \gets RQ$\;
+	\If{$|T[k, k-1]| < \epsilon$}{
+		$k \gets k - 1$\;
+	}
+}
+\end{algorithm}
+\vspace{8pt}
+
+\noindent Вспомогательная процедура $\mathrm{HessenbergReduction}()$ имеет алгоритм:
+
+\vspace{8pt}
+\begin{algorithm}[H]
+\caption{Hessenberg reduction}
+\vspace{4pt}
+\KwIn{$A_{n \times n}$}
+\KwOut{$H_{n \times n}$}
+$H \gets A_{n \times n}$\;
+\For{$i \gets 1$, $i \leq n - 2$, $i \gets i + 1$} {
+	$k \gets m - i - 1$\;
+	$u_i \gets \mathrm{HouseholderReflection}(R[i+1:n, i])_{k \times 1}$\;
+	$H[i+1:n, i:n] \gets H[i+1:n, i:n] - 2 u_i \cdot (u_i^T \cdot H[i+1:n, i:n])$\;
+	$H[1:n, i+1:n] \gets H[1:n, i+1:n] - 2 H[1:n, i+1:n] \cdot u_i \cdot u_i^T$\;
+}
+\end{algorithm}
+\vspace{8pt}
+
+\noindent Использование отражений Хаусхолдера для редукции к верхне-хессенберговой форме во многом аналогично их применению в QR-разложении, с той разницей, что вместо обнуления всех $s_i$ поддиагональных элементов происходит обнуление $s_i - 1$.
+
+QR-разложение в силу Хессенберговой формы матрицы можем записать работающее для блоков ширины $2$, что снизит сложность до $O(n^2)$:
+
+\vspace{8pt}
+\begin{algorithm}[H]
+\caption{QR Factorization for Hessenberg matrices}
+\vspace{4pt}
+\KwData{$A$ is an upper-hessenberg matrix}
+\KwIn{$A_{n \times n}$}
+\KwOut{$Q_{n \times n}$, $R_{n \times n}$, $RQ_{n \times n}$}
+$Q \gets I_{n \times n}$\;
+$R \gets A_{n \times n}$\;
+$V \gets \mathrm{Zero}_{n \times n}$\;
+\For{$i \gets 1$, $i \leq n - 1$, $i \gets i + 1$} {
+	$k \gets m - i$\;
+	$u_i \gets \mathrm{HouseholderReflection}(R[i:i+1, i])_{k \times 1}$\;
+	$Q[1:n, i:i+1] \gets Q[1:n, i:i+1] - 2 Q[1:n, i:i+1] \cdot u_i \cdot u_i^T$\;
+	$R[i:i+1, i:n] \gets R[i:i+1, i:n] - 2 u_i \cdot (u_i^T \cdot R[i:i+1, i:n])$\;
+	$V[i:i+1, i] \gets u_i$\; 
+}
+$RQ \gets R$\;
+\For{$i \gets 1$, $i \leq n - 1$, $i \gets i + 1$} {
+	$v_i \gets V[i:i+1, i]$\;
+	$RQ[1:m, i:i+1] \gets RQ[1:m, i:i+1] - 2 RQ[1:m, i:i+1] \cdot v_i \cdot v_i^T$\;
+}
+\end{algorithm}
+\vspace{8pt}
+
+\noindent Заметим, что непосредственно для QR-алгоритма матрицы $Q$, $R$ не нужны, их расчет реализован для общности и для отладочных целей.
+
+\subsection{Обратная итерация}
+
+Зная собственные значения из разложения Шура, собственные векторы можем получить с помощью метода обратной итерации:
+
+\vspace{8pt}
+\begin{algorithm}[H]
+\caption{Inverse iteration}
+\vspace{4pt}
+\KwIn{$A_{n \times n}$, $\lambda_0$}
+\KwOut{$\lambda$, $z_{n \times 1}$}
+$i \gets 0$\;
+$x \gets \mathrm{Ones}_{n \times 1} / n$ \tcc*{$||x||_2 = 1$}
+\Repeat{$|\lambda_i - \lambda_{i-1}| < \epsilon$} {
+	$i \gets i + 1$\;
+	$x \gets \mathrm{GaussianElimination}(A - \lambda_0 I, x)$\;
+	$x \gets x / ||x||_2$ \tcc*{$||x||_2 = 1$}
+	$\lambda_i \gets x^T \cdot A \cdot x$\;
+}
+$\lambda \gets \lambda_i$\;
+$z \gets x_{n \times 1}$\;
+\end{algorithm}
+\vspace{8pt}
+
+\noindent В данном случае $\mathrm{GaussianElimination}()$ является вспомогательной процедурой для решения СЛАУ, выбор конкретно данного метода существенным не является. В программе реализован вариант с частичным выбором ведущего элемента и предобуславливателем Якоби.
+
+\subsection{Результаты}
+
+Получены собственные значения и векторы матрицы $A$, результаты сравнения с аналитическими результатами приведены ниже для $\epsilon = 10^{-1}, 10^{-3}, 10^{-6}$:
 \begin{center}
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|}
 \hline
- j & $|\lambda_j^0 - \lambda_j|$ & $||z_j^0 - z_j||_2$ \\
+ j & $|\lambda_j^0 - \lambda_j|$ & Итераций до редукции & $||z_j^0 - z_j||_2$ & Обратных итераций \\
 \hline
- 1 &  0.0383792 & x \\
- 2 & 0.00164998 & x \\
- 3 & 0.00198987 & x \\
- 4 & 0.00445514 & x \\
- 5 & 0.00474202 & x \\
- 6 & 0.00674079 & x \\
- 7 & 0.00682261 & x \\
- 8 & 0.00718661 & x \\
- 9 & 0.00664725 & x \\
-10 & 0.00542461 & x \\
+   $1$ &                         $0.0383792$ &                     $5$ &                  $0.0615102$ &                   $1$ \\
+   $2$ &                         $0.00164998$ &                     $4$ &                  $0.0551268$ &                   $1$ \\
+   $3$ &                         $0.00198987$ &                     $9$ &                  $0.0322314$ &                   $1$ \\
+   $4$ &                         $0.00445514$ &                     $13$ &                  $0.00774489$ &                   $1$ \\
+   $5$ &                         $0.00474202$ &                     $12$ &                  $0.00858965$ &                   $1$ \\
+   $6$ &                         $0.00674079$ &                     $17$ &                  $0.00774881$ &                   $1$ \\
+   $7$ &                         $0.00682261$ &                     $15$ &                  $0.00972806$ &                   $1$ \\
+   $8$ &                         $0.00718661$ &                     $19$ &                  $0.0116313$ &                   $1$ \\
+   $9$ &                         $0.00664725$ &                     $17$ &                  $0.0136519$ &                   $1$ \\
+   $10$ &                         $0.00542461$ &                     $129$ &                  $0.0105261$ &                   $1$ \\
 \hline
 \end{tabular}
 \captionof{table}{Ошибки при $\epsilon = 10^{-1}$}
 \end{center}
 
 \begin{center}
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|}
 \hline
- j & $|\lambda_j^0 - \lambda_j|$ & $||z_j^0 - z_j||_2$ \\
+ j & $|\lambda_j^0 - \lambda_j|$ & Итераций до редукции & $||z_j^0 - z_j||_2$ & Обратных итераций \\
 \hline
- 1 & 0.000395515 & x \\ 
- 2 & 1.15997e-05 & x \\ 
- 3 & 1.46055e-05 & x \\ 
- 4 & 4.50412e-05 & x \\ 
- 5 & 4.80620e-05 & x \\ 
- 6 & 6.73953e-05 & x \\ 
- 7 & 6.82741e-05 & x \\ 
- 8 & 7.18550e-05 & x \\ 
- 9 & 6.65622e-05 & x \\ 
-10 & 5.45308e-05 & x \\ 
+   $1$ &                         $0.000395515$ &                     $9$ &                  $0.000543584$ &                   $1$ \\
+   $2$ &                         $1.1599 \cdot 10^{-5}$ &                     $2$ &                  $0.000475849$ &                   $1$ \\
+   $3$ &                         $1.4605 \cdot 10^{-5}$ &                     $13$ &                  $0.000301104$ &                   $1$ \\
+   $4$ &                         $4.5041 \cdot 10^{-5}$ &                     $8$ &                  $7.3896 \cdot 10^{-5}$ &                   $1$ \\
+   $5$ &                         $4.8062 \cdot 10^{-5}$ &                     $17$ &                  $8.4203 \cdot 10^{-5}$ &                   $1$ \\
+   $6$ &                         $6.7395 \cdot 10^{-5}$ &                     $12$ &                  $7.7519 \cdot 10^{-5}$ &                   $1$ \\
+   $7$ &                         $6.8274 \cdot 10^{-5}$ &                     $20$ &                  $9.7227 \cdot 10^{-5}$ &                   $1$ \\
+   $8$ &                         $7.1855 \cdot 10^{-5}$ &                     $14$ &                  $0.000116509$ &                   $1$ \\
+   $9$ &                         $6.6562 \cdot 10^{-5}$ &                     $22$ &                  $0.000137413$ &                   $1$ \\
+   $10$ &                         $5.4530 \cdot 10^{-5}$ &                     $129$ &                  $0.000106285$ &                   $1$ \\
 \hline
 \end{tabular}
-\captionof{table}{Ошибки при $\epsilon = 10^{-1}$}
+\captionof{table}{Ошибки при $\epsilon = 10^{-3}$}
 \end{center}
 
 \begin{center}
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|}
 \hline
- j & $|\lambda_j^0 - \lambda_j|$ & $||z_j^0 - z_j||_2$ \\
+ j & $|\lambda_j^0 - \lambda_j|$ & Итераций до редукции & $||z_j^0 - z_j||_2$ & Обратных итераций \\
 \hline
- 1 & 3.95623e-07 & x \\
- 2 & 1.15569e-08 & x \\
- 3 & 1.45556e-08 & x \\
- 4 & 4.50458e-08 & x \\
- 5 & 4.80682e-08 & x \\
- 6 & 6.73952e-08 & x \\
- 7 & 6.82745e-08 & x \\
- 8 & 7.18549e-08 & x \\
- 9 & 6.65631e-08 & x \\
-10 & 5.45337e-08 & x \\
+   $1$ &                         $3.9562 \cdot 10^{-7}$ &                     $16$ &                  $5.4294 \cdot 10^{-7}$ &                   $1$ \\
+   $2$ &                         $1.1556 \cdot 10^{-8}$ &                     $1$ &                  $4.8413 \cdot 10^{-7}$ &                   $1$ \\
+   $3$ &                         $1.4555 \cdot 10^{-8}$ &                     $19$ &                  $3.0090 \cdot 10^{-7}$ &                   $1$ \\
+   $4$ &                         $4.5045 \cdot 10^{-8}$ &                     $4$ &                  $8.7816 \cdot 10^{-8}$ &                   $1$ \\
+   $5$ &                         $4.8068 \cdot 10^{-8}$ &                     $22$ &                  $8.4187 \cdot 10^{-8}$ &                   $1$ \\
+   $6$ &                         $6.7395 \cdot 10^{-8}$ &                     $8$ &                  $7.4401 \cdot 10^{-8}$ &                   $1$ \\
+   $7$ &                         $6.8274 \cdot 10^{-8}$ &                     $28$ &                  $9.7226 \cdot 10^{-8}$ &                   $1$ \\
+   $8$ &                         $7.1855 \cdot 10^{-8}$ &                     $11$ &                  $6.7154 \cdot 10^{-7}$ &                   $1$ \\
+   $9$ &                         $6.6563 \cdot 10^{-8}$ &                     $30$ &                  $1.3742 \cdot 10^{-7}$ &                   $1$ \\
+   $10$ &                         $5.4533 \cdot 10^{-8}$ &                     $81$ &                  $1.0629 \cdot 10^{-7}$ &                   $3$ \\
 \hline
 \end{tabular}
-\captionof{table}{Ошибки при $\epsilon = 10^{-1}$}
+\captionof{table}{Ошибки при $\epsilon = 10^{-6}$}
 \end{center}
 
 Пример сводки результатов расчета для малого $n$ (в силу вербозности результата при $n = 10$) приведен в приложении.
@@ -375,10 +589,11 @@ lls_error_estimate -> 3.990082657206211e-16
 % includepdf омерзительно кривой, поэтому заголовки приходится ставить так
 
 \includepdf[scale=0.9,pagecommand=\section{Листинг расчетной программы на C++}]{images/utils.hpp.pdf}
+\includepdf[scale=0.9, pages=-]{images/slae.hpp.pdf}
 \includepdf[scale=0.9, pages=-]{images/qr_factorization.hpp.pdf}
 \includepdf[scale=0.9, pages=-]{images/linear_least_squares.hpp.pdf}
 \includepdf[scale=0.9, pages=-]{images/eigenvalues.hpp.pdf}
-\includepdf[scale=0.9, pages=-]{images/main.hpp.pdf}
+\includepdf[scale=0.9, pages=-]{images/main.cpp.pdf}
 
 \includepdf[scale=0.9,pagecommand=\section{Листинг проверочного скрипта на Wolfram Mathematica}]{images/mathematica.pdf}
 
@@ -391,74 +606,74 @@ lls_error_estimate -> 3.990082657206211e-16
 
 epsilon -> 1e-06
 N       -> 4
-A0      -> Tensor [size = 16] (4 x 4):
+A0      -> Dense matrix [size = 16] (4 x 4):
   [  2 -1  0  0 ]
   [ -1  2 -1  0 ]
   [  0 -1  2 -1 ]
   [  0  0 -1  2 ]
 
-deltaA  -> Tensor [size = 16] (4 x 4):
-  [           0 1.66667e-07    1.25e-07       1e-07 ]
-  [ 1.66667e-07           0       1e-07 8.33333e-08 ]
-  [    1.25e-07       1e-07           0 7.14286e-08 ]
-  [       1e-07 8.33333e-08 7.14286e-08           0 ]
+deltaA  -> Dense matrix [size = 16] (4 x 4):
+  [          0 1.6667e-07   1.25e-07      1e-07 ]
+  [ 1.6667e-07          0      1e-07 8.3333e-08 ]
+  [   1.25e-07      1e-07          0 7.1429e-08 ]
+  [      1e-07 8.3333e-08 7.1429e-08          0 ]
 
-A       -> Tensor [size = 16] (4 x 4):
-  [        2          -1 1.25e-07       1e-07 ]
-  [       -1           2       -1 8.33333e-08 ]
-  [ 1.25e-07          -1        2          -1 ]
-  [    1e-07 8.33333e-08       -1           2 ]
+A       -> Dense matrix [size = 16] (4 x 4):
+  [        2         -1 1.25e-07      1e-07 ]
+  [       -1          2       -1 8.3333e-08 ]
+  [ 1.25e-07         -1        2         -1 ]
+  [    1e-07 8.3333e-08       -1          2 ]
 
-A_hat   -> Tensor [size = 12] (4 x 3):
-  [        2          -1 1.25e-07 ]
-  [       -1           2       -1 ]
-  [ 1.25e-07          -1        2 ]
-  [    1e-07 8.33333e-08       -1 ]
+A_hat   -> Dense matrix [size = 12] (4 x 3):
+  [        2         -1 1.25e-07 ]
+  [       -1          2       -1 ]
+  [ 1.25e-07         -1        2 ]
+  [    1e-07 8.3333e-08       -1 ]
 
 ------------------------
 --- QR factorization ---
 ------------------------
 
-Q             -> Tensor [size = 12] (4 x 3):
-  [    -0.894427    -0.358569 -0.19518 ]
-  [     0.447214    -0.717137 -0.39036 ]
-  [ -5.59017e-08     0.597614 -0.58554 ]
-  [ -4.47214e-08 -9.76103e-08  0.68313 ]
+Q             -> Dense matrix [size = 12] (4 x 3):
+  [    -0.89443   -0.35857 -0.19518 ]
+  [     0.44721   -0.71714 -0.39036 ]
+  [ -5.5902e-08    0.59761 -0.58554 ]
+  [ -4.4721e-08 -9.761e-08  0.68313 ]
 
-R             -> Tensor [size = 9] (3 x 3):
-  [     -2.23607      1.78885 -0.447214 ]
-  [  2.22045e-16     -1.67332   1.91237 ]
-  [ -2.64698e-23 -1.11022e-16  -1.46385 ]
+R             -> Dense matrix [size = 9] (3 x 3):
+  [    -2.2361      1.7889 -0.44721 ]
+  [ 2.2204e-16     -1.6733   1.9124 ]
+  [ -2.647e-23 -1.1102e-16  -1.4639 ]
 
 Verification:
 
-Q^T * Q       -> Tensor [size = 9] (3 x 3):
-  [           1  2.77556e-16  8.32667e-17 ]
-  [ 2.77556e-16            1 -2.22045e-16 ]
-  [ 8.32667e-17 -2.22045e-16            1 ]
+Q^T * Q       -> Dense matrix [size = 9] (3 x 3):
+  [          1  2.7756e-16  8.3267e-17 ]
+  [ 2.7756e-16           1 -2.2204e-16 ]
+  [ 8.3267e-17 -2.2204e-16           1 ]
 
-Q * R - A_hat -> Tensor [size = 12] (4 x 3):
-  [  2.22045e-15 -1.77636e-15  6.83606e-16 ]
-  [ -8.88178e-16 -8.88178e-16  1.33227e-15 ]
-  [  1.32697e-16  3.33067e-16 -4.44089e-16 ]
-  [  3.97047e-23 -7.58428e-17  2.22045e-16 ]
+Q * R - A_hat -> Dense matrix [size = 12] (4 x 3):
+  [  2.2204e-15 -1.7764e-15  6.8361e-16 ]
+  [ -8.8818e-16 -8.8818e-16  1.3323e-15 ]
+  [   1.327e-16  3.3307e-16 -4.4409e-16 ]
+  [  3.9705e-23 -7.5843e-17  2.2204e-16 ]
 
 -------------------------------------
 --- Linear Least Squares solution ---
 -------------------------------------
 
-x0                 -> Tensor [size = 3] (3 x 1):
+x0                 -> Dense matrix [size = 3] (3 x 1):
   [ 1 ]
   [ 4 ]
   [ 9 ]
 
-b                  -> Tensor [size = 4] (4 x 1):
+b                  -> Dense matrix [size = 4] (4 x 1):
   [ -2 ]
   [ -2 ]
   [ 14 ]
   [ -9 ]
 
-x_lls              -> Tensor [size = 3] (3 x 1):
+x_lls              -> Dense matrix [size = 3] (3 x 1):
   [ 1 ]
   [ 4 ]
   [ 9 ]
@@ -469,43 +684,51 @@ lls_error_estimate -> 1.8496162997539822e-16
 --- Eigenvalue solution ---
 ---------------------------
 
-H_hessenberg                  -> Tensor [size = 16] (4 x 4):
-  [           2            1 -2.64698e-23  1.32349e-23 ]
-  [           1            2           -1 -2.64698e-23 ]
-  [ 2.64698e-23           -1            2            1 ]
-  [ 1.32349e-23 -2.64698e-23            1            2 ]
+H_hessenberg                  -> Dense matrix [size = 16] (4 x 4):
+  [          2          1 -2.647e-23 1.3235e-23 ]
+  [          1          2         -1 -2.647e-23 ]
+  [  2.647e-23         -1          2          1 ]
+  [ 1.3235e-23 -2.647e-23          1          2 ]
 
-T_shur                        -> Tensor [size = 16] (4 x 4):
-  [     3.61803 -1.46354e-16 -1.55722e-16 -1.88824e-16 ]
-  [ 2.56137e-27     0.381966  4.50213e-16  3.42274e-16 ]
-  [ 6.03553e-17  1.73417e-16      2.61803 -4.28483e-16 ]
-  [ 1.15867e-17  1.13712e-16 -8.62537e-22      1.38197 ]
+T_shur                        -> Dense matrix [size = 16] (4 x 4):
+  [       3.618 -5.9746e-16 -2.7092e-16 -3.8027e-16 ]
+  [  2.5614e-27     0.38197  3.9167e-16   1.396e-16 ]
+  [ -2.8355e-21  1.6472e-16       2.618  -1.558e-16 ]
+  [  6.2793e-18   5.744e-18 -4.3103e-23       1.382 ]
 
-lambda0 (analythic eigenvals) -> Tensor [size = 4] (4 x 1):
-  [ 0.381966 ]
-  [  1.38197 ]
-  [  2.61803 ]
-  [  3.61803 ]
+lambda0 (analythic eigenvals) -> Dense matrix [size = 4] (4 x 1):
+  [ 0.38197 ]
+  [   1.382 ]
+  [   2.618 ]
+  [   3.618 ]
 
-lambda    (numeric eigenvals) -> Tensor [size = 4] (4 x 1):
-  [ 0.381966 ]
-  [  1.38197 ]
-  [  2.61803 ]
-  [  3.61803 ]
+lambda    (numeric eigenvals) -> Dense matrix [size = 4] (4 x 1):
+  [ 0.38197 ]
+  [   1.382 ]
+  [   2.618 ]
+  [   3.618 ]
 
-z0      (analythic eigenvecs) -> Tensor [size = 16] (4 x 4):
-  [ 0.371748  0.601501  0.601501  0.371748 ]
-  [ 0.601501  0.371748 -0.371748 -0.601501 ]
-  [ 0.601501 -0.371748 -0.371748  0.601501 ]
-  [ 0.371748 -0.601501  0.601501 -0.371748 ]
+z0      (analythic eigenvecs) -> Dense matrix [size = 16] (4 x 4):
+  [ 0.37175   0.6015   0.6015  0.37175 ]
+  [  0.6015  0.37175 -0.37175  -0.6015 ]
+  [  0.6015 -0.37175 -0.37175   0.6015 ]
+  [ 0.37175  -0.6015   0.6015 -0.37175 ]
 
-|----|-------------------------|-------------------------|
-|  j | |lambda_j^0 - lambda_j| |        ||z0_j - z-j||_2 |
-|----|-------------------------|-------------------------|
-|   1|              2.99649e-07|                        x|
-|   2|              8.66901e-08|                        x|
-|   3|              9.96489e-08|                        x|
-|   4|              1.13310e-07|                        x|
+z       (analythic eigenvecs) -> Dense matrix [size = 16] (4 x 4):
+  [ 0.37175   0.6015   0.6015  0.37175 ]
+  [  0.6015  0.37175 -0.37175  -0.6015 ]
+  [  0.6015 -0.37175 -0.37175   0.6015 ]
+  [ 0.37175  -0.6015   0.6015 -0.37175 ]
+
+\hline
+  j  &  |lambda_j^0 - lambda_j|  &  Reduction
+  iterations &  ||z0_j - z-j||_2  &  Reverse iterations \\
+\hline
+   $1$ &                         $2.9964 \cdot 10^{-7}$ &                     $17$ &                  $7.2580 \cdot 10^{-8}$ &                   $1$ \\
+   $2$ &                         $8.6690 \cdot 10^{-8}$ &                     $1$ &                  $5.3141 \cdot 10^{-8}$ &                   $1$ \\
+   $3$ &                         $9.9648 \cdot 10^{-8}$ &                     $20$ &                  $6.0723 \cdot 10^{-8}$ &                   $1$ \\
+   $4$ &                         $1.1331 \cdot 10^{-7}$ &                     $33$ &                  $9.0724 \cdot 10^{-8}$ &                   $1$ \\
+\hline
 \end{tinyverbatim}
 
 \end{document}

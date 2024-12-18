@@ -118,7 +118,7 @@ inline std::tuple<Matrix, Matrix, Matrix> qr_factorize_hessenberg(const Matrix& 
     // Compute { Q, R } in O(N^2)
     for (Idx i = 0; i < M - 1; ++i) {
         const Vector ui = householder_reflect(R.block(i, i, 2, 1));              // O(N)
-        R.block(i, 0, 2, M) -= 2. * ui * (ui.transpose() * R.block(i, 0, 2, M)); // O(N)
+        R.block(i, i, 2, M - i) -= 2. * ui * (ui.transpose() * R.block(i, i, 2, M - i)); // O(N)
         Q.block(0, i, M, 2) -= Q.block(0, i, M, 2) * 2. * ui * ui.transpose();   // O(N)
         V.block(i, i, 2, 1) = ui;                                                // O(N)
     }
@@ -126,8 +126,8 @@ inline std::tuple<Matrix, Matrix, Matrix> qr_factorize_hessenberg(const Matrix& 
     // Compute { RQ } in O(N^2)
     Matrix RQ = R;
     for (Idx i = 0; i < M - 1; ++i) {
-        Vector v = V.block(i, i, 2, 1);
-        RQ.block(0, i, M, 2) -= RQ.block(0, i, M, 2) * 2. * v * v.transpose(); // O(N)
+        Vector vi = V.block(i, i, 2, 1);
+        RQ.block(0, i, M, 2) -= RQ.block(0, i, M, 2) * 2. * vi * vi.transpose(); // O(N)
     }
 
     return {Q, R, RQ};

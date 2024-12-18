@@ -2,6 +2,7 @@
 #include "linear_least_squares.hpp"
 #include "utils.hpp"
 #include <cmath>
+#include <tuple>
 
 
 
@@ -13,7 +14,7 @@ int main() {
     // ===============
 
     constexpr double      Nvar    = 1;
-    constexpr double      epsilon = 1e-6; // 0.1
+    constexpr double      epsilon = 1e-6; // 1e-1, 1e-3, 1e-6
     constexpr double      c       = Nvar / (Nvar + 1.) * epsilon;
     constexpr std::size_t N       = 4;
 
@@ -102,22 +103,32 @@ int main() {
     Vector lambda0(N);
     for (Idx j = 0; j < lambda0.size(); ++j) lambda0(j) = 2. * (1. - std::cos(math::PI * (j + 1) / (N + 1)));
     std::sort(lambda0.begin(), lambda0.end());
-    
+
     // Compute analythical eigenvectors (columns of the matrix store vectors)
     Matrix z0(N, N);
     for (Idx k = 0; k < z0.cols(); ++k)
         for (Idx i = 0; i < z0.rows(); ++i)
             z0(i, k) = std::sqrt(2. / (N + 1)) * std::sin(math::PI * (i + 1) * (k + 1) / (N + 1));
-    
+
     // Compute 'H' from Hessenberg decomposition 'A = P H P^*'
     Matrix H_hessenberg = hessenberg_reduce(A);
 
     // Compute numeric eigenvalues
-    const auto T_shur = eigenvalues(H_hessenberg);
+    const auto [ T_shur, lambda_iteration_counts ] = qr_algorithm(H_hessenberg);
 
     // Extract numeric eigenvalues as a sorted vector for comparison
     Vector lambda = T_shur.diagonal();
     std::sort(lambda.begin(), lambda.end());
+
+    // Compute numeric eigenvecs
+    Matrix                   z(N, N);
+    std::vector<std::size_t> z_iteration_counts(N);
+    for (Idx k = 0; k < z0.cols(); ++k) {
+        const auto res        = reverse_iteration(A, lambda(k));
+        lambda(k)             = std::get<0>(res);
+        z.col(k)              = std::get<1>(res); // Eigen doesn't like 'std::tie()'
+        z_iteration_counts[k] = std::get<2>(res);
+    }
 
     log::println("---------------------------");
     log::println("--- Eigenvalue solution ---");
@@ -128,15 +139,18 @@ int main() {
     log::println("lambda0 (analythic eigenvals) -> ", stringify_matrix(lambda0));
     log::println("lambda    (numeric eigenvals) -> ", stringify_matrix(lambda));
     log::println("z0      (analythic eigenvecs) -> ", stringify_matrix(z0));
-
-    table::create({4, 25, 25});
-    table::hline();
-    table::cell(" j ", " |lambda_j^0 - lambda_j| ", " ||z0_j - z-j||_2 ");
-    table::hline();
+    log::println("z       (analythic eigenvecs) -> ", stringify_matrix(z));
     
+    table::set_latex_mode(true); // generate tables in export format
+    
+    table::create({4, 25, 21, 18, 19});
+    table::hline();
+    table::cell(" j ", " |lambda_j^0 - lambda_j| ", "Reduction iterations", " ||z0_j - z-j||_2 ", "Reverse iterations");
+    table::hline();
     for (std::size_t j = 0; j < N; ++j) {
-        table::cell(j + 1, std::abs(lambda0(j) - lambda(j)), "x");
+        table::cell(j + 1, std::abs(lambda0(j) - lambda(j)), lambda_iteration_counts[j], (z0.col(j) - z.col(j)).norm(), z_iteration_counts[j]);
     }
+    table::hline();
 
     return 0;
 }
