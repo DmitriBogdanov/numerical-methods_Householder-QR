@@ -7318,8 +7318,9 @@ void _append_decorated_value(std::ostream& os, const T& value) {
             number_string += '}';
         }
 
-        // Typeset numbers as formulas
-        os << "$" << number_string << "$";
+        // Typeset numbers as formulas 
+        os << "$" + number_string + "$";
+        // we append it as a single string so ostream 'setw()' doesn't mess up alignment
     } else os << value;
 }
 

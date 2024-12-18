@@ -14,9 +14,9 @@ int main() {
     // ===============
 
     constexpr double      Nvar    = 1;
-    constexpr double      epsilon = 1e-6; // 1e-1, 1e-3, 1e-6
+    constexpr double      epsilon = 1e-3; // 1e-1, 1e-3, 1e-6
     constexpr double      c       = Nvar / (Nvar + 1.) * epsilon;
-    constexpr std::size_t N       = 4;
+    constexpr std::size_t N       = 10;
 
     // A0 = {  2, if (j == j)
     //      { -1, if (i == j - 1 || i == j + 1)
@@ -143,7 +143,7 @@ int main() {
     
     table::set_latex_mode(true); // generate tables in export format
     
-    table::create({4, 25, 21, 18, 19});
+    table::create({4, 25, 20, 25, 20});
     table::hline();
     table::cell(" j ", " |lambda_j^0 - lambda_j| ", "Reduction iterations", " ||z0_j - z-j||_2 ", "Reverse iterations");
     table::hline();
