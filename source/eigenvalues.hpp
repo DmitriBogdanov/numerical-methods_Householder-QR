@@ -61,6 +61,8 @@ std::pair<Matrix, std::vector<std::size_t>> qr_algorithm(const Matrix& A) {
     std::size_t       iteration      = 0;
     Idx               N              = A.rows(); // mutable here since we shrink the working block (!)
 
+    const double epsilon = std::numeric_limits<double>::epsilon() * A.norm();
+
     Matrix                   T_schur = A;
     std::vector<std::size_t> iteration_counts;
     iteration_counts.reserve(N);
@@ -70,7 +72,7 @@ std::pair<Matrix, std::vector<std::size_t>> qr_algorithm(const Matrix& A) {
         [[maybe_unused]] const auto [Q, R, RQ] =
             qr_factorize_hessenberg(T_schur.block(0, 0, N, N) - sigma * Matrix::Identity(N, N)); // (N^2)
         T_schur.block(0, 0, N, N) = RQ + sigma * Matrix::Identity(N, N);                         // (N^2)
-        if (std::abs(T_schur(N - 1, N - 2)) < std::numeric_limits<double>::epsilon()) {          // O(1)
+        if (std::abs(T_schur(N - 1, N - 2)) < epsilon) {          // O(1)
             --N;
             if (iteration_counts.empty()) iteration_counts.push_back(iteration);
             else iteration_counts.push_back(iteration - iteration_counts.back());
